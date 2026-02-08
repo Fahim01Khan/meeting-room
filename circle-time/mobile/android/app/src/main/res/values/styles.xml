@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Styles for Meeting Room Panel App
+  Full-screen theme configuration for SUNMI M2 MAX tablet
+-->
+<resources>
+
+    <!-- Base application theme -->
+    <style name="AppTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="android:windowBackground">@android:color/white</item>
+        <item name="colorPrimary">#2563EB</item>
+        <item name="colorPrimaryDark">#1D4ED8</item>
+        <item name="colorAccent">#2563EB</item>
+    </style>
+
+    <!-- Full-screen theme for kiosk-style display -->
+    <style name="Theme.App.Fullscreen" parent="AppTheme">
+        <!-- Hide status bar -->
+        <item name="android:windowFullscreen">true</item>
+        
+        <!-- Hide navigation bar -->
+        <item name="android:windowTranslucentNavigation">true</item>
+        <item name="android:windowTranslucentStatus">true</item>
+        
+        <!-- Prevent content from being obscured -->
+        <item name="android:fitsSystemWindows">false</item>
+        
+        <!-- Keep screen on -->
+        <item name="android:keepScreenOn">true</item>
+        
+        <!-- No title bar -->
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowActionBar">false</item>
+        
+        <!-- Immersive mode flags (set programmatically) -->
+        <!-- These are typically set in MainActivity for API compatibility -->
+    </style>
+
+    <!-- Splash screen theme -->
+    <style name="Theme.App.SplashScreen" parent="Theme.App.Fullscreen">
+        <item name="android:windowBackground">@drawable/splash_background</item>
+    </style>
+
+</resources>

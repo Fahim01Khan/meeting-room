@@ -1,0 +1,57 @@
+# =========================
+# OS / Editor
+# =========================
+.vs/
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# =========================
+# Logs
+# =========================
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# =========================
+# Environment files
+# =========================
+.env
+.env.*
+!.env.example
+
+# =========================
+# Web (Vite / React)
+# =========================
+web/node_modules/
+web/dist/
+web/.vite/
+
+# =========================
+# Mobile (React Native)
+# =========================
+mobile/node_modules/
+mobile/.expo/
+mobile/android/.gradle/
+mobile/android/app/build/
+mobile/android/build/
+mobile/ios/Pods/
+mobile/ios/build/
+
+# =========================
+# Backend (Django – future)
+# =========================
+backend/venv/
+backend/__pycache__/
+backend/*.sqlite3
+backend/media/
+backend/staticfiles/
+
+# =========================
+# Testing / Coverage
+# =========================
+coverage/
+*.lcov
