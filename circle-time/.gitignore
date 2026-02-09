@@ -73,6 +73,7 @@ staticfiles/
 backend/venv/
 backend/media/
 backend/staticfiles/
+*.egg-info/
 
 # =========================
 # Migrations (keep __init__.py)
