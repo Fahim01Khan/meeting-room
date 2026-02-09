@@ -1,11 +1,12 @@
 # =========================
 # OS / Editor
 # =========================
-.vs/
-.vscode/
-.idea/
 .DS_Store
 Thumbs.db
+.vscode/
+.idea/
+.vs/
+*.iml
 
 # =========================
 # Logs
@@ -24,11 +25,20 @@ yarn-error.log*
 !.env.example
 
 # =========================
+# Node / Frontend (Web + Mobile)
+# =========================
+node_modules/
+dist/
+build/
+.expo/
+.expo-shared/
+.vite/
+
+# =========================
 # Web (Vite / React)
 # =========================
 web/node_modules/
 web/dist/
-web/.vite/
 
 # =========================
 # Mobile (React Native)
@@ -36,60 +46,42 @@ web/.vite/
 mobile/node_modules/
 mobile/.expo/
 mobile/android/.gradle/
-mobile/android/app/build/
 mobile/android/build/
+mobile/android/app/build/
 mobile/ios/Pods/
 mobile/ios/build/
 
 # =========================
-# Backend (Django – future)
+# Python / Backend (Django)
 # =========================
-backend/venv/
-backend/__pycache__/
-backend/*.sqlite3
-backend/media/
-backend/staticfiles/
-
-# =========================
-# Testing / Coverage
-# =========================
-coverage/
-*.lcov
-
-# Python
 __pycache__/
 *.py[cod]
 *.pyo
 *.pyd
-*.log
 
 # Virtual environments
 .venv/
 venv/
 env/
 
-# Django
-.env
+# Django artifacts
 *.sqlite3
 media/
 staticfiles/
 
+# Backend-specific paths
+backend/venv/
+backend/media/
+backend/staticfiles/
+
+# =========================
 # Migrations (keep __init__.py)
+# =========================
 **/migrations/*
 !**/migrations/__init__.py
 
-# Node / frontend
-node_modules/
-dist/
-build/
-.expo/
-.expo-shared/
-
-# IDEs
-.vscode/
-.idea/
-*.iml
-
-# OS
-.DS_Store
-Thumbs.db
+# =========================
+# Testing / Coverage
+# =========================
+coverage/
+*.lcov
