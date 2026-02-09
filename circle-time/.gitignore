@@ -55,3 +55,41 @@ backend/staticfiles/
 # =========================
 coverage/
 *.lcov
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.log
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Django
+.env
+*.sqlite3
+media/
+staticfiles/
+
+# Migrations (keep __init__.py)
+**/migrations/*
+!**/migrations/__init__.py
+
+# Node / frontend
+node_modules/
+dist/
+build/
+.expo/
+.expo-shared/
+
+# IDEs
+.vscode/
+.idea/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
