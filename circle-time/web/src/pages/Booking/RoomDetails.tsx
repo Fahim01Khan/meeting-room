@@ -78,46 +78,17 @@ export const RoomDetails: React.FC<RoomDetailsProps> = ({ roomId, onBookRoom, on
     loadData();
   }, [roomId, selectedDate]);
 
-  // Mock room data
-  const mockRoom: Room = {
-    id: roomId,
-    name: 'Conference Room A',
-    building: 'Main Building',
-    floor: 1,
-    capacity: 10,
-    amenities: ['projector', 'whiteboard', 'video_conference', 'air_conditioning'],
-    status: 'available',
-  };
+  if (loading) {
+    return <LoadingState message="Loading room details..." />;
+  }
 
-  const mockBookings: Booking[] = [
-    {
-      id: '1',
-      roomId: roomId,
-      roomName: 'Conference Room A',
-      title: 'Sprint Planning',
-      organizer: { id: '1', name: 'John Doe', email: 'john@company.com' },
-      attendees: [],
-      startTime: '2024-01-15T09:00:00',
-      endTime: '2024-01-15T10:00:00',
-      status: 'confirmed',
-      checkedIn: true,
-    },
-    {
-      id: '2',
-      roomId: roomId,
-      roomName: 'Conference Room A',
-      title: 'Design Review',
-      organizer: { id: '2', name: 'Jane Smith', email: 'jane@company.com' },
-      attendees: [],
-      startTime: '2024-01-15T14:00:00',
-      endTime: '2024-01-15T15:30:00',
-      status: 'confirmed',
-      checkedIn: false,
-    },
-  ];
-
-  const displayRoom = room || mockRoom;
-  const displayBookings = bookings.length > 0 ? bookings : mockBookings;
+  if (!room) {
+    return (
+      <div style={{ padding: spacing.lg, textAlign: 'center', color: colors.textSecondary }}>
+        <p>Room not found</p>
+      </div>
+    );
+  }
 
   const containerStyle: React.CSSProperties = {
     padding: spacing.lg,
@@ -160,8 +131,8 @@ export const RoomDetails: React.FC<RoomDetailsProps> = ({ roomId, onBookRoom, on
     borderRadius: borderRadius.full,
     fontSize: typography.fontSize.sm,
     fontWeight: typography.fontWeight.medium,
-    backgroundColor: displayRoom.status === 'available' ? colors.successLight : colors.errorLight,
-    color: displayRoom.status === 'available' ? colors.success : colors.error,
+    backgroundColor: room.status === 'available' ? colors.successLight : colors.errorLight,
+    color: room.status === 'available' ? colors.success : colors.error,
     textTransform: 'capitalize',
   };
 
@@ -248,11 +219,11 @@ export const RoomDetails: React.FC<RoomDetailsProps> = ({ roomId, onBookRoom, on
 
       <div style={headerStyle}>
         <div style={titleRowStyle}>
-          <h1 style={titleStyle}>{displayRoom.name}</h1>
-          <span style={statusBadgeStyle}>{displayRoom.status}</span>
+          <h1 style={titleStyle}>{room.name}</h1>
+          <span style={statusBadgeStyle}>{room.status}</span>
         </div>
         <p style={metaStyle}>
-          {displayRoom.building} · Floor {displayRoom.floor} · Capacity: {displayRoom.capacity} people
+          {room.building} · Floor {room.floor} · Capacity: {room.capacity} people
         </p>
       </div>
 
@@ -260,7 +231,7 @@ export const RoomDetails: React.FC<RoomDetailsProps> = ({ roomId, onBookRoom, on
         <h2 style={sectionTitleStyle}>Amenities</h2>
         <div style={cardStyle}>
           <div style={amenitiesGridStyle}>
-            {displayRoom.amenities.map((amenity) => (
+            {room.amenities.map((amenity) => (
               <div key={amenity} style={amenityItemStyle}>
                 <span style={{ color: colors.primary }}>{amenityIcons[amenity]}</span>
                 <span style={{ textTransform: 'capitalize' }}>{amenity.replace('_', ' ')}</span>
@@ -286,17 +257,17 @@ export const RoomDetails: React.FC<RoomDetailsProps> = ({ roomId, onBookRoom, on
           />
         </div>
         <div style={cardStyle}>
-          {displayBookings.length === 0 ? (
+          {bookings.length === 0 ? (
             <p style={{ color: colors.textSecondary, textAlign: 'center', padding: spacing.lg }}>
               No bookings scheduled for this date
             </p>
           ) : (
-            displayBookings.map((booking, index) => (
+            bookings.map((booking, index) => (
               <div
                 key={booking.id}
                 style={{
                   ...bookingItemStyle,
-                  borderBottom: index === displayBookings.length - 1 ? 'none' : bookingItemStyle.borderBottom,
+                  borderBottom: index === bookings.length - 1 ? 'none' : bookingItemStyle.borderBottom,
                 }}
               >
                 <div>
@@ -324,8 +295,8 @@ export const RoomDetails: React.FC<RoomDetailsProps> = ({ roomId, onBookRoom, on
         </div>
       </div>
 
-      {onBookRoom && displayRoom.status === 'available' && (
-        <button type="button" style={bookButtonStyle} onClick={() => onBookRoom(displayRoom)}>
+      {onBookRoom && room.status !== 'maintenance' && (
+        <button type="button" style={bookButtonStyle} onClick={() => onBookRoom(room)}>
           Book This Room
         </button>
       )}

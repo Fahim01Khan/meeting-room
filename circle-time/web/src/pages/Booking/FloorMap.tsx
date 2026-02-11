@@ -3,10 +3,12 @@
 import React, { useState, useEffect } from 'react';
 import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme';
 import { fetchRooms } from '../../services/rooms';
+import type { Room } from '../../types/room';
 
 interface FloorMapProps {
   buildingId?: string;
   floor?: number;
+  onRoomSelect?: (room: Room) => void;
 }
 
 interface RoomPosition {
@@ -16,12 +18,14 @@ interface RoomPosition {
   y: number;
   width: number;
   height: number;
-  status: 'available' | 'occupied' | 'reserved';
+  status: 'available' | 'occupied' | 'reserved' | 'maintenance';
+  raw: Room;
 }
 
-export const FloorMap: React.FC<FloorMapProps> = () => {
+export const FloorMap: React.FC<FloorMapProps> = ({ onRoomSelect }) => {
   const [selectedFloor, setSelectedFloor] = useState(1);
   const [hoveredRoom, setHoveredRoom] = useState<string | null>(null);
+  const [allRooms, setAllRooms] = useState<Room[]>([]);
 
   const containerStyle: React.CSSProperties = {
     padding: spacing.lg,
@@ -104,27 +108,32 @@ export const FloorMap: React.FC<FloorMapProps> = () => {
   // Rooms from API, laid out on SVG grid
   const [rooms, setRooms] = useState<RoomPosition[]>([]);
 
+  // Fetch all rooms once
   useEffect(() => {
     fetchRooms()
-      .then((data) => {
-        // Position rooms in a 2-column grid on the SVG floor plan
-        const positions: RoomPosition[] = data.slice(0, 6).map((r, i) => {
-          const col = i % 3;
-          const row = Math.floor(i / 3);
-          return {
-            id: r.id,
-            name: r.name,
-            x: 50 + col * 150,
-            y: 50 + row * 110,
-            width: col === 2 ? 70 : 120,
-            height: row === 0 ? 80 : 80,
-            status: r.status === 'available' ? 'available' : r.status === 'occupied' ? 'occupied' : 'reserved',
-          };
-        });
-        setRooms(positions);
-      })
+      .then((data) => setAllRooms(data))
       .catch(console.error);
-  }, [selectedFloor]);
+  }, []);
+
+  // Filter + position rooms when floor changes or data loads
+  useEffect(() => {
+    const floorRooms = allRooms.filter((r) => r.floor === selectedFloor);
+    const positions: RoomPosition[] = floorRooms.map((r, i) => {
+      const col = i % 3;
+      const row = Math.floor(i / 3);
+      return {
+        id: r.id,
+        name: r.name,
+        x: 50 + col * 150,
+        y: 50 + row * 110,
+        width: col === 2 ? 70 : 120,
+        height: 80,
+        status: r.status,
+        raw: r,
+      };
+    });
+    setRooms(positions);
+  }, [allRooms, selectedFloor]);
 
   const getStatusColor = (status: RoomPosition['status']) => {
     switch (status) {
@@ -134,8 +143,16 @@ export const FloorMap: React.FC<FloorMapProps> = () => {
         return colors.error;
       case 'reserved':
         return colors.warning;
+      case 'maintenance':
+        return colors.textMuted;
       default:
         return colors.border;
+    }
+  };
+
+  const handleRoomClick = (room: RoomPosition) => {
+    if (onRoomSelect) {
+      onRoomSelect(room.raw);
     }
   };
 
@@ -175,6 +192,10 @@ export const FloorMap: React.FC<FloorMapProps> = () => {
             <div style={legendDotStyle(colors.warning)} />
             <span>Reserved</span>
           </div>
+          <div style={legendItemStyle}>
+            <div style={legendDotStyle(colors.textMuted)} />
+            <span>Maintenance</span>
+          </div>
         </div>
 
         <div style={svgContainerStyle}>
@@ -210,6 +231,7 @@ export const FloorMap: React.FC<FloorMapProps> = () => {
                 key={room.id}
                 onMouseEnter={() => setHoveredRoom(room.id)}
                 onMouseLeave={() => setHoveredRoom(null)}
+                onClick={() => handleRoomClick(room)}
                 style={{ cursor: 'pointer' }}
               >
                 <rect
@@ -258,7 +280,15 @@ export const FloorMap: React.FC<FloorMapProps> = () => {
         {hoveredRoom && (
           <div style={{ marginTop: spacing.md, textAlign: 'center' }}>
             <span style={{ color: colors.textSecondary, fontSize: typography.fontSize.sm }}>
-              Click a room for details
+              Click to view room details &amp; book
+            </span>
+          </div>
+        )}
+
+        {rooms.length === 0 && (
+          <div style={{ marginTop: spacing.md, textAlign: 'center', padding: spacing.lg }}>
+            <span style={{ color: colors.textSecondary, fontSize: typography.fontSize.base }}>
+              No rooms on this floor
             </span>
           </div>
         )}

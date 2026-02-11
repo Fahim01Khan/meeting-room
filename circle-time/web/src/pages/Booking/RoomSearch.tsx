@@ -139,48 +139,6 @@ export const RoomSearch: React.FC<RoomSearchProps> = ({ onRoomSelect }) => {
     }));
   };
 
-  // Mock data for demonstration
-  const mockRooms: Room[] = [
-    {
-      id: '1',
-      name: 'Conference Room A',
-      building: 'Main Building',
-      floor: 1,
-      capacity: 10,
-      amenities: ['projector', 'whiteboard', 'video_conference'],
-      status: 'available',
-    },
-    {
-      id: '2',
-      name: 'Meeting Room B',
-      building: 'Main Building',
-      floor: 2,
-      capacity: 6,
-      amenities: ['whiteboard', 'tv_display'],
-      status: 'occupied',
-    },
-    {
-      id: '3',
-      name: 'Board Room',
-      building: 'Executive Wing',
-      floor: 3,
-      capacity: 20,
-      amenities: ['projector', 'video_conference', 'phone', 'air_conditioning'],
-      status: 'available',
-    },
-    {
-      id: '4',
-      name: 'Huddle Space 1',
-      building: 'Main Building',
-      floor: 1,
-      capacity: 4,
-      amenities: ['whiteboard'],
-      status: 'reserved',
-    },
-  ];
-
-  const displayRooms = rooms.length > 0 ? rooms : mockRooms;
-
   return (
     <div style={containerStyle}>
       <div style={headerStyle}>
@@ -273,13 +231,13 @@ export const RoomSearch: React.FC<RoomSearchProps> = ({ onRoomSelect }) => {
 
       {loading ? (
         <LoadingState message="Searching rooms..." />
-      ) : displayRooms.length === 0 ? (
+      ) : rooms.length === 0 ? (
         <div style={emptyStateStyle}>
           <p>No rooms found matching your criteria</p>
         </div>
       ) : (
         <div style={roomGridStyle}>
-          {displayRooms.map((room) => (
+          {rooms.map((room) => (
             <RoomCard key={room.id} room={room} onClick={onRoomSelect} />
           ))}
         </div>

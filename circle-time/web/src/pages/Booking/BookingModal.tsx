@@ -281,12 +281,11 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 style={inputStyle}
                 onChange={(e) => {
                   const date = e.target.value;
-                  if (formData.startTime) {
-                    handleInputChange('startTime', `${date}T${formData.startTime.split('T')[1] || '09:00'}`);
-                  }
-                  if (formData.endTime) {
-                    handleInputChange('endTime', `${date}T${formData.endTime.split('T')[1] || '10:00'}`);
-                  }
+                  const startTimePart = formData.startTime.split('T')[1] || '09:00';
+                  const endTimePart = formData.endTime.split('T')[1] || '10:00';
+                  handleInputChange('startTime', `${date}T${startTimePart}`);
+                  // handleInputChange clears errors each call, so call it for endTime separately
+                  setFormData((prev) => ({ ...prev, endTime: `${date}T${endTimePart}` }));
                 }}
               />
             </div>

@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { colors, spacing, typography, borderRadius, shadows } from '../styles/theme';
+import { clearTokens } from '../services/api';
 
 interface NavItem {
   path: string;
@@ -103,11 +104,14 @@ export const Layout: React.FC = () => {
   };
 
   const logoContainerStyle: React.CSSProperties = {
-    padding: spacing.lg,
+    padding: `${spacing.md} ${spacing.lg}`,
     borderBottom: `1px solid ${colors.border}`,
     display: 'flex',
     alignItems: 'center',
     gap: spacing.sm,
+    height: '72px',
+    boxSizing: 'border-box',
+    justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
   };
 
   const logoStyle: React.CSSProperties = {
@@ -129,7 +133,7 @@ export const Layout: React.FC = () => {
   };
 
   const navSectionStyle: React.CSSProperties = {
-    padding: `${spacing.lg} ${spacing.md}`,
+    padding: sidebarCollapsed ? `${spacing.lg} ${spacing.sm}` : `${spacing.lg} ${spacing.md}`,
   };
 
   const navLabelStyle: React.CSSProperties = {
@@ -146,8 +150,9 @@ export const Layout: React.FC = () => {
   const navItemStyle = (isActive: boolean): React.CSSProperties => ({
     display: 'flex',
     alignItems: 'center',
-    gap: spacing.sm,
-    padding: `${spacing.sm} ${spacing.md}`,
+    justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
+    gap: sidebarCollapsed ? '0' : spacing.sm,
+    padding: sidebarCollapsed ? spacing.sm : `${spacing.sm} ${spacing.md}`,
     borderRadius: borderRadius.md,
     color: isActive ? colors.primary : colors.textSecondary,
     backgroundColor: isActive ? colors.primaryLight : 'transparent',
@@ -173,6 +178,8 @@ export const Layout: React.FC = () => {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
+    height: '72px',
+    boxSizing: 'border-box',
   };
 
   const toggleButtonStyle: React.CSSProperties = {
@@ -289,6 +296,22 @@ export const Layout: React.FC = () => {
                 </p>
               </div>
             )}
+            <button
+              type="button"
+              onClick={() => { clearTokens(); window.location.href = '/login'; }}
+              style={{
+                marginLeft: spacing.md,
+                padding: `${spacing.xs} ${spacing.md}`,
+                backgroundColor: 'transparent',
+                border: `1px solid ${colors.border}`,
+                borderRadius: borderRadius.md,
+                color: colors.textSecondary,
+                fontSize: typography.fontSize.sm,
+                cursor: 'pointer',
+              }}
+            >
+              Logout
+            </button>
           </div>
         </header>
 
