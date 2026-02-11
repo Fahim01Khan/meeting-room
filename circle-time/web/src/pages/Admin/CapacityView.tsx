@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme';
-import type { DateRange } from '../../types/analytics';
+import type { DateRange, KPIData } from '../../types/analytics';
 import { DateRangePicker } from '../../components/DateRangePicker';
 import { KPIStat } from '../../components/KPIStat';
+import { fetchCapacityData } from '../../services/analytics';
 
 export const CapacityView: React.FC = () => {
   const [dateRange, setDateRange] = useState<DateRange>({
@@ -70,21 +71,42 @@ export const CapacityView: React.FC = () => {
     color: colors.textSecondary,
   };
 
-  // Mock capacity data
-  const capacityStats = [
-    { label: 'Avg Capacity Used', value: '58%', change: 5, changeType: 'positive' as const },
-    { label: 'Oversized Bookings', value: 156, change: -12, changeType: 'positive' as const },
-    { label: 'Undersized Bookings', value: 89, change: 8, changeType: 'negative' as const },
-    { label: 'Right-Sized Rate', value: '72%', change: 4, changeType: 'positive' as const },
-  ];
+  // Capacity data from API
+  const [capacityStats, setCapacityStats] = useState<KPIData[]>([]);
+  const [roomCapacityData, setRoomCapacityData] = useState<{ room: string; capacity: number; avgAttendees: number; utilization: number }[]>([]);
 
-  const roomCapacityData = [
-    { room: 'Board Room', capacity: 20, avgAttendees: 8, utilization: 40 },
-    { room: 'Conference A', capacity: 10, avgAttendees: 7, utilization: 70 },
-    { room: 'Meeting B', capacity: 6, avgAttendees: 4, utilization: 67 },
-    { room: 'Huddle 1', capacity: 4, avgAttendees: 3, utilization: 75 },
-    { room: 'Training Room', capacity: 30, avgAttendees: 12, utilization: 40 },
-  ];
+  useEffect(() => {
+    fetchCapacityData(dateRange)
+      .then((data) => {
+        // Derive KPI summary cards
+        const totalOversized = data.reduce((s, d) => s + d.oversizedBookings, 0);
+        const totalUndersized = data.reduce((s, d) => s + d.undersizedBookings, 0);
+        const avgCapUtil = data.length > 0
+          ? Math.round(data.reduce((s, d) => s + d.capacityUtilization, 0) / data.length)
+          : 0;
+        const totalBookings = totalOversized + totalUndersized + data.reduce((s, d) => s + Math.max(0, Math.round(d.averageAttendees)), 0);
+        const rightSized = totalBookings > 0
+          ? Math.round(((totalBookings - totalOversized - totalUndersized) / totalBookings) * 100)
+          : 0;
+
+        setCapacityStats([
+          { label: 'Avg Capacity Used', value: `${avgCapUtil}%`, changeType: 'neutral' },
+          { label: 'Oversized Bookings', value: totalOversized, changeType: 'negative' },
+          { label: 'Undersized Bookings', value: totalUndersized, changeType: 'negative' },
+          { label: 'Right-Sized Rate', value: `${rightSized}%`, changeType: 'positive' },
+        ]);
+
+        setRoomCapacityData(
+          data.map((d) => ({
+            room: d.roomName,
+            capacity: d.roomCapacity,
+            avgAttendees: d.averageAttendees,
+            utilization: d.capacityUtilization,
+          })),
+        );
+      })
+      .catch(console.error);
+  }, [dateRange]);
 
   return (
     <div style={containerStyle}>

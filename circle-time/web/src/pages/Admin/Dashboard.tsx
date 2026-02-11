@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { colors, spacing, typography, borderRadius } from '../../styles/theme';
-import type { DateRange, KPIData } from '../../types/analytics';
+import type { DateRange, KPIData, RoomComparison } from '../../types/analytics';
 import { KPIStat } from '../../components/KPIStat';
 import { DateRangePicker } from '../../components/DateRangePicker';
+import { fetchKPIData, fetchRoomComparison } from '../../services/analytics';
 
 export const Dashboard: React.FC = () => {
   const [dateRange, setDateRange] = useState<DateRange>({
@@ -79,13 +80,12 @@ export const Dashboard: React.FC = () => {
     gap: spacing.lg,
   };
 
-  // Mock KPI data
-  const kpiData: KPIData[] = [
-    { label: 'Total Rooms', value: 48, change: 4, changeType: 'positive' },
-    { label: 'Avg Utilization', value: '67%', change: 12, changeType: 'positive' },
-    { label: 'Ghosting Rate', value: '18%', change: -5, changeType: 'negative' },
-    { label: 'Total Bookings', value: 1247, change: 8, changeType: 'positive' },
-  ];
+  // KPI data from API
+  const [kpiData, setKpiData] = useState<KPIData[]>([]);
+
+  useEffect(() => {
+    fetchKPIData(dateRange).then(setKpiData).catch(console.error);
+  }, [dateRange]);
 
   return (
     <div style={containerStyle}>
@@ -139,7 +139,7 @@ export const Dashboard: React.FC = () => {
       <div style={sectionStyle}>
         <h2 style={sectionTitleStyle}>Room Performance Comparison</h2>
         <div style={chartContainerStyle}>
-          <RoomComparisonTable />
+          <RoomComparisonTable dateRange={dateRange} />
         </div>
       </div>
     </div>
@@ -196,7 +196,13 @@ const HeatmapPlaceholder: React.FC = () => {
   );
 };
 
-const RoomComparisonTable: React.FC = () => {
+const RoomComparisonTable: React.FC<{ dateRange: DateRange }> = ({ dateRange }) => {
+  const [comparisonData, setComparisonData] = useState<RoomComparison[]>([]);
+
+  useEffect(() => {
+    fetchRoomComparison([], dateRange).then(setComparisonData).catch(console.error);
+  }, [dateRange]);
+
   const tableStyle: React.CSSProperties = {
     width: '100%',
     borderCollapse: 'collapse',
@@ -218,14 +224,6 @@ const RoomComparisonTable: React.FC = () => {
     color: colors.text,
   };
 
-  const mockData = [
-    { name: 'Conference A', utilization: 78, ghosting: 12, bookings: 156 },
-    { name: 'Meeting B', utilization: 65, ghosting: 22, bookings: 134 },
-    { name: 'Board Room', utilization: 82, ghosting: 8, bookings: 98 },
-    { name: 'Huddle 1', utilization: 54, ghosting: 28, bookings: 187 },
-    { name: 'Huddle 2', utilization: 61, ghosting: 15, bookings: 201 },
-  ];
-
   return (
     <table style={tableStyle}>
       <thead>
@@ -237,9 +235,9 @@ const RoomComparisonTable: React.FC = () => {
         </tr>
       </thead>
       <tbody>
-        {mockData.map((room) => (
-          <tr key={room.name}>
-            <td style={tdStyle}>{room.name}</td>
+        {comparisonData.map((room) => (
+          <tr key={room.roomName}>
+            <td style={tdStyle}>{room.roomName}</td>
             <td style={tdStyle}>
               <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm }}>
                 <div

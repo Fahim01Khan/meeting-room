@@ -1,0 +1,183 @@
+### Circle Time — API Test File (VS Code REST Client)
+### All responses use envelope: { "success": boolean, "data": <payload|null>, "message"?: string }
+
+@baseUrl = http://localhost:8000/api
+@roomId = 00000000-0000-0000-0000-000000000001
+@roomId2 = 00000000-0000-0000-0000-000000000002
+
+### =========================================================================
+### Health Check
+### =========================================================================
+
+### Health
+GET {{baseUrl}}/health HTTP/1.1
+
+### =========================================================================
+### Auth
+### =========================================================================
+
+### Login (dev email+password → JWT)
+# @name login
+POST {{baseUrl}}/auth/login HTTP/1.1
+Content-Type: application/json
+
+{
+  "email": "admin@example.com",
+  "password": "pass1234"
+}
+
+###
+@token = {{login.response.body.data.access}}
+
+### Me (current user profile)
+GET {{baseUrl}}/auth/me HTTP/1.1
+Authorization: Bearer {{token}}
+
+### OIDC Login (stub — 501 in local mode)
+GET {{baseUrl}}/auth/oidc/login HTTP/1.1
+
+### OIDC Callback (stub — 501 in local mode)
+GET {{baseUrl}}/auth/oidc/callback HTTP/1.1
+
+### =========================================================================
+### Rooms
+### =========================================================================
+
+### List all rooms
+GET {{baseUrl}}/rooms HTTP/1.1
+Authorization: Bearer {{token}}
+
+### List rooms with filters (camelCase)
+GET {{baseUrl}}/rooms?building=HQ&floor=1&minCapacity=6&amenities=whiteboard,projector&searchQuery=conference HTTP/1.1
+Authorization: Bearer {{token}}
+
+### Get room by ID
+GET {{baseUrl}}/rooms/{{roomId}} HTTP/1.1
+Authorization: Bearer {{token}}
+
+### Room availability
+GET {{baseUrl}}/rooms/{{roomId}}/availability?date=2026-02-10 HTTP/1.1
+Authorization: Bearer {{token}}
+
+### List buildings
+GET {{baseUrl}}/buildings HTTP/1.1
+Authorization: Bearer {{token}}
+
+### =========================================================================
+### Bookings
+### =========================================================================
+
+### Bookings by room + date (organizer = User object)
+GET {{baseUrl}}/rooms/{{roomId}}/bookings?date=2026-02-10 HTTP/1.1
+Authorization: Bearer {{token}}
+
+### Create booking (server enforces conflict → 409 on overlap)
+# @name createBooking
+POST {{baseUrl}}/bookings HTTP/1.1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "roomId": "00000000-0000-0000-0000-000000000001",
+  "title": "Ad-hoc Sync",
+  "description": "Quick alignment meeting",
+  "startTime": "2026-02-11T11:00:00Z",
+  "endTime": "2026-02-11T11:30:00Z",
+  "attendeeIds": []
+}
+
+###
+@bookingId = {{createBooking.response.body.data.id}}
+
+### Update booking
+PUT {{baseUrl}}/bookings/{{bookingId}} HTTP/1.1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Updated: Ad-hoc Sync",
+  "endTime": "2026-02-11T12:00:00Z"
+}
+
+### Check in to booking
+POST {{baseUrl}}/bookings/{{bookingId}}/checkin HTTP/1.1
+Authorization: Bearer {{token}}
+
+### End booking early
+POST {{baseUrl}}/bookings/{{bookingId}}/end HTTP/1.1
+Authorization: Bearer {{token}}
+
+### Cancel booking
+DELETE {{baseUrl}}/bookings/{{bookingId}} HTTP/1.1
+Authorization: Bearer {{token}}
+
+### Create conflicting booking (expect 409)
+POST {{baseUrl}}/bookings HTTP/1.1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "roomId": "00000000-0000-0000-0000-000000000001",
+  "title": "Conflicting Meeting",
+  "startTime": "2026-02-11T11:00:00Z",
+  "endTime": "2026-02-11T11:30:00Z",
+  "attendeeIds": []
+}
+
+### =========================================================================
+### Panel (Mobile — no auth required)
+### =========================================================================
+
+### Get room state (mobile enums, organizer as string)
+GET {{baseUrl}}/rooms/{{roomId}}/state HTTP/1.1
+
+### Mobile check-in
+POST {{baseUrl}}/meetings/{{bookingId}}/checkin HTTP/1.1
+Content-Type: application/json
+
+### Mobile end meeting early
+POST {{baseUrl}}/meetings/{{bookingId}}/end HTTP/1.1
+Content-Type: application/json
+
+### =========================================================================
+### Analytics (Admin — all accept startDate & endDate)
+### =========================================================================
+
+@startDate = 2026-01-27
+@endDate = 2026-02-10
+
+### KPI summary
+GET {{baseUrl}}/analytics/kpi?startDate={{startDate}}&endDate={{endDate}} HTTP/1.1
+Authorization: Bearer {{token}}
+
+### Utilization per room
+GET {{baseUrl}}/analytics/utilization?startDate={{startDate}}&endDate={{endDate}} HTTP/1.1
+Authorization: Bearer {{token}}
+
+### Utilization filtered by building
+GET {{baseUrl}}/analytics/utilization?startDate={{startDate}}&endDate={{endDate}}&building=HQ HTTP/1.1
+Authorization: Bearer {{token}}
+
+### Ghosting per room
+GET {{baseUrl}}/analytics/ghosting?startDate={{startDate}}&endDate={{endDate}} HTTP/1.1
+Authorization: Bearer {{token}}
+
+### Capacity efficiency per room
+GET {{baseUrl}}/analytics/capacity?startDate={{startDate}}&endDate={{endDate}} HTTP/1.1
+Authorization: Bearer {{token}}
+
+### Heatmap (day × hour)
+GET {{baseUrl}}/analytics/heatmap?startDate={{startDate}}&endDate={{endDate}} HTTP/1.1
+Authorization: Bearer {{token}}
+
+### Room comparison
+GET {{baseUrl}}/analytics/rooms/compare?startDate={{startDate}}&endDate={{endDate}} HTTP/1.1
+Authorization: Bearer {{token}}
+
+### Trends
+GET {{baseUrl}}/analytics/trends?startDate={{startDate}}&endDate={{endDate}}&metric=utilization HTTP/1.1
+Authorization: Bearer {{token}}
+
+### Export (CSV)
+GET {{baseUrl}}/analytics/export?startDate={{startDate}}&endDate={{endDate}}&format=csv HTTP/1.1
+Authorization: Bearer {{token}}

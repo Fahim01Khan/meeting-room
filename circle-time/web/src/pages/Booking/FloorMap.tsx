@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme';
+import { fetchRooms } from '../../services/rooms';
 
 interface FloorMapProps {
   buildingId?: string;
@@ -100,15 +101,30 @@ export const FloorMap: React.FC<FloorMapProps> = () => {
     zIndex: 100,
   };
 
-  // Mock room positions for SVG floor plan
-  const mockRooms: RoomPosition[] = [
-    { id: '1', name: 'Conference A', x: 50, y: 50, width: 120, height: 80, status: 'available' },
-    { id: '2', name: 'Meeting B', x: 200, y: 50, width: 100, height: 80, status: 'occupied' },
-    { id: '3', name: 'Huddle 1', x: 330, y: 50, width: 70, height: 60, status: 'available' },
-    { id: '4', name: 'Board Room', x: 50, y: 160, width: 150, height: 100, status: 'reserved' },
-    { id: '5', name: 'Meeting C', x: 230, y: 160, width: 100, height: 80, status: 'available' },
-    { id: '6', name: 'Huddle 2', x: 360, y: 160, width: 70, height: 60, status: 'occupied' },
-  ];
+  // Rooms from API, laid out on SVG grid
+  const [rooms, setRooms] = useState<RoomPosition[]>([]);
+
+  useEffect(() => {
+    fetchRooms()
+      .then((data) => {
+        // Position rooms in a 2-column grid on the SVG floor plan
+        const positions: RoomPosition[] = data.slice(0, 6).map((r, i) => {
+          const col = i % 3;
+          const row = Math.floor(i / 3);
+          return {
+            id: r.id,
+            name: r.name,
+            x: 50 + col * 150,
+            y: 50 + row * 110,
+            width: col === 2 ? 70 : 120,
+            height: row === 0 ? 80 : 80,
+            status: r.status === 'available' ? 'available' : r.status === 'occupied' ? 'occupied' : 'reserved',
+          };
+        });
+        setRooms(positions);
+      })
+      .catch(console.error);
+  }, [selectedFloor]);
 
   const getStatusColor = (status: RoomPosition['status']) => {
     switch (status) {
@@ -189,7 +205,7 @@ export const FloorMap: React.FC<FloorMapProps> = () => {
             />
 
             {/* Rooms */}
-            {mockRooms.map((room) => (
+            {rooms.map((room) => (
               <g
                 key={room.id}
                 onMouseEnter={() => setHoveredRoom(room.id)}

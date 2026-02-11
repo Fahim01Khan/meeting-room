@@ -20,7 +20,7 @@ interface RoomStateContextValue {
 const RoomStateContext = createContext<RoomStateContextValue | null>(null);
 
 // Configuration - would come from device setup in production
-const ROOM_ID = 'room-001';
+const ROOM_ID = '00000000-0000-0000-0000-000000000001';
 
 // Mock data for UI development
 const mockRoomInfo: RoomInfo = {
@@ -67,7 +67,7 @@ interface RoomStateProviderProps {
 }
 
 export const RoomStateProvider: React.FC<RoomStateProviderProps> = ({ children }) => {
-  const [roomState, setRoomState] = useState<RoomState | null>(mockRoomState);
+  const [roomState, setRoomState] = useState<RoomState | null>(null);
   const [currentScreen, setCurrentScreen] = useState<ScreenType>('idle');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

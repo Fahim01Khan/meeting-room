@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme';
 import type { DateRange } from '../../types/analytics';
 import { DateRangePicker } from '../../components/DateRangePicker';
+import { fetchUtilizationData } from '../../services/analytics';
 
 export const UtilizationView: React.FC = () => {
   const [dateRange, setDateRange] = useState<DateRange>({
@@ -86,15 +87,22 @@ export const UtilizationView: React.FC = () => {
     marginBottom: spacing.lg,
   };
 
-  // Mock utilization data
-  const utilizationData = [
-    { room: 'Conference A', rate: 82, trend: 'up' },
-    { room: 'Meeting B', rate: 67, trend: 'down' },
-    { room: 'Board Room', rate: 75, trend: 'up' },
-    { room: 'Huddle 1', rate: 54, trend: 'stable' },
-    { room: 'Huddle 2', rate: 61, trend: 'up' },
-    { room: 'Training Room', rate: 45, trend: 'down' },
-  ];
+  // Utilization data from API
+  const [utilizationData, setUtilizationData] = useState<{ room: string; rate: number; trend: string }[]>([]);
+
+  useEffect(() => {
+    fetchUtilizationData(dateRange)
+      .then((data) =>
+        setUtilizationData(
+          data.map((d) => ({
+            room: d.roomName,
+            rate: d.utilizationRate,
+            trend: d.utilizationRate >= 70 ? 'up' : d.utilizationRate >= 50 ? 'stable' : 'down',
+          })),
+        ),
+      )
+      .catch(console.error);
+  }, [dateRange, selectedBuilding]);
 
   return (
     <div style={containerStyle}>

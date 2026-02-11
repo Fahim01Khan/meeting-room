@@ -1,19 +1,19 @@
 // Real-time update service for Panel App
 
 import type { RoomState } from '../types/meeting';
+import { fetchRoomState } from './api';
 
 type RoomStateCallback = (state: RoomState) => void;
 
 let pollingInterval: NodeJS.Timeout | null = null;
 let subscribers: RoomStateCallback[] = [];
+let currentRoomId: string | null = null;
 
 export const subscribeToRoomUpdates = (
   roomId: string,
   callback: RoomStateCallback
 ): (() => void) => {
-  // TODO: wire data source - implement WebSocket or polling
-  console.log(`Subscribing to room updates: ${roomId}`);
-  
+  currentRoomId = roomId;
   subscribers.push(callback);
   
   // Return unsubscribe function
@@ -23,16 +23,22 @@ export const subscribeToRoomUpdates = (
 };
 
 export const startPolling = (roomId: string, intervalMs: number = 30000): void => {
-  // TODO: wire data source
-  console.log(`Starting polling for room ${roomId} every ${intervalMs}ms`);
-  
+  currentRoomId = roomId;
+
   if (pollingInterval) {
     clearInterval(pollingInterval);
   }
   
-  pollingInterval = setInterval(() => {
-    // Fetch room state and notify subscribers
-    console.log('Polling for updates...');
+  pollingInterval = setInterval(async () => {
+    if (!currentRoomId) return;
+    try {
+      const state = await fetchRoomState(currentRoomId);
+      if (state) {
+        notifySubscribers(state);
+      }
+    } catch (err) {
+      console.error('Polling error:', err);
+    }
   }, intervalMs);
 };
 
@@ -41,6 +47,7 @@ export const stopPolling = (): void => {
     clearInterval(pollingInterval);
     pollingInterval = null;
   }
+  currentRoomId = null;
 };
 
 export const notifySubscribers = (state: RoomState): void => {
@@ -54,6 +61,5 @@ export const notifySubscribers = (state: RoomState): void => {
 };
 
 export const isConnected = (): boolean => {
-  // TODO: implement connection status check
-  return true;
+  return pollingInterval !== null;
 };

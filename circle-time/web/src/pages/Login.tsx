@@ -112,7 +112,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
     marginTop: spacing.lg,
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
@@ -121,9 +121,18 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
       return;
     }
 
-    // TODO: Implement actual authentication
-    if (onLogin) {
-      onLogin(email, password);
+    try {
+      const { apiClient, setTokens } = await import('../services/api');
+      const res = await apiClient.post<{ access: string; refresh: string; user: { id: string; name: string; email: string } }>(
+        '/auth/login',
+        { email, password },
+      );
+      setTokens(res.data.access, res.data.refresh);
+      // Navigate to main app
+      window.location.href = '/';
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Login failed';
+      setError(msg);
     }
   };
 

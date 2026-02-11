@@ -1,46 +1,53 @@
 // Room-related API services
 
+import { apiClient } from './api';
 import type { Room, RoomFilter, Building, FloorPlan } from '../types/room';
 
 export const fetchRooms = async (): Promise<Room[]> => {
-  // TODO: wire data source
-  return [];
+  const res = await apiClient.get<Room[]>('/rooms');
+  return res.data;
 };
 
 export const fetchRoomById = async (roomId: string): Promise<Room | null> => {
-  // TODO: wire data source
-  console.log(`Fetching room: ${roomId}`);
-  return null;
+  const res = await apiClient.get<Room>(`/rooms/${roomId}`);
+  return res.data ?? null;
 };
 
 export const fetchRoomsFiltered = async (filters: RoomFilter): Promise<Room[]> => {
-  // TODO: wire data source
-  console.log('Filtering rooms:', filters);
-  return [];
+  const params = new URLSearchParams();
+  if (filters.building) params.set('building', filters.building);
+  if (filters.floor !== undefined) params.set('floor', String(filters.floor));
+  if (filters.minCapacity !== undefined) params.set('minCapacity', String(filters.minCapacity));
+  if (filters.amenities?.length) params.set('amenities', filters.amenities.join(','));
+  if (filters.status) params.set('status', filters.status);
+  if (filters.searchQuery) params.set('searchQuery', filters.searchQuery);
+
+  const qs = params.toString();
+  const res = await apiClient.get<Room[]>(`/rooms${qs ? `?${qs}` : ''}`);
+  return res.data;
 };
 
 export const fetchBuildings = async (): Promise<Building[]> => {
-  // TODO: wire data source
-  return [];
+  const res = await apiClient.get<Building[]>('/buildings');
+  return res.data;
 };
 
 export const fetchFloorPlan = async (buildingId: string, floor: number): Promise<FloorPlan | null> => {
-  // TODO: wire data source
-  console.log(`Fetching floor plan: ${buildingId}, floor ${floor}`);
-  return null;
+  const res = await apiClient.get<FloorPlan>(`/buildings/${buildingId}/floors/${floor}`);
+  return res.data ?? null;
 };
 
 export const searchRooms = async (query: string): Promise<Room[]> => {
-  // TODO: wire data source
-  console.log(`Searching rooms: ${query}`);
-  return [];
+  const res = await apiClient.get<Room[]>(`/rooms?searchQuery=${encodeURIComponent(query)}`);
+  return res.data;
 };
 
 export const fetchRoomAvailability = async (
   roomId: string,
-  date: string
+  date: string,
 ): Promise<{ startTime: string; endTime: string; isAvailable: boolean }[]> => {
-  // TODO: wire data source
-  console.log(`Fetching availability: ${roomId} on ${date}`);
-  return [];
+  const res = await apiClient.get<{ startTime: string; endTime: string; isAvailable: boolean }[]>(
+    `/rooms/${roomId}/availability?date=${date}`,
+  );
+  return res.data;
 };

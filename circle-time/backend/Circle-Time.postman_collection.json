@@ -1,0 +1,753 @@
+{
+  "info": {
+    "name": "Circle Time API",
+    "description": "Complete API collection for Circle Time meeting room management.\nAll responses use envelope: { success: boolean, data: <payload|null>, message?: string }",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8000/api" },
+    { "key": "token", "value": "" },
+    { "key": "roomId", "value": "00000000-0000-0000-0000-000000000001" },
+    { "key": "roomId2", "value": "00000000-0000-0000-0000-000000000002" },
+    { "key": "bookingId", "value": "" },
+    { "key": "startDate", "value": "2026-01-27" },
+    { "key": "endDate", "value": "2026-02-10" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/health", "host": ["{{baseUrl}}"], "path": ["health"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Health OK', function() {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "  pm.expect(json.data.status).to.eql('ok');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"pass1234\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Login success', function() {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "  pm.expect(json.data.access).to.be.a('string');",
+                  "  pm.expect(json.data.refresh).to.be.a('string');",
+                  "  pm.expect(json.data.user).to.have.property('id');",
+                  "  pm.expect(json.data.user).to.have.property('name');",
+                  "  pm.expect(json.data.user).to.have.property('email');",
+                  "  pm.collectionVariables.set('token', json.data.access);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Me",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/auth/me", "host": ["{{baseUrl}}"], "path": ["auth", "me"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Me returns user', function() {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "  pm.expect(json.data).to.have.property('id');",
+                  "  pm.expect(json.data).to.have.property('name');",
+                  "  pm.expect(json.data).to.have.property('email');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "OIDC Login (stub)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/auth/oidc/login", "host": ["{{baseUrl}}"], "path": ["auth", "oidc", "login"] }
+          }
+        },
+        {
+          "name": "OIDC Callback (stub)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/auth/oidc/callback", "host": ["{{baseUrl}}"], "path": ["auth", "oidc", "callback"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Rooms",
+      "item": [
+        {
+          "name": "List All Rooms",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/rooms", "host": ["{{baseUrl}}"], "path": ["rooms"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Rooms list', function() {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "  pm.expect(json.data).to.be.an('array');",
+                  "  if (json.data.length > 0) {",
+                  "    var r = json.data[0];",
+                  "    pm.expect(r).to.have.property('id');",
+                  "    pm.expect(r).to.have.property('name');",
+                  "    pm.expect(r).to.have.property('building');",
+                  "    pm.expect(r).to.have.property('floor');",
+                  "    pm.expect(r).to.have.property('capacity');",
+                  "    pm.expect(r).to.have.property('amenities');",
+                  "    pm.expect(r).to.have.property('status');",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Rooms (filtered)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rooms?building=HQ&floor=1&minCapacity=6&amenities=whiteboard,projector&searchQuery=conference",
+              "host": ["{{baseUrl}}"],
+              "path": ["rooms"],
+              "query": [
+                { "key": "building", "value": "HQ" },
+                { "key": "floor", "value": "1" },
+                { "key": "minCapacity", "value": "6" },
+                { "key": "amenities", "value": "whiteboard,projector" },
+                { "key": "searchQuery", "value": "conference" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Room by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/rooms/{{roomId}}", "host": ["{{baseUrl}}"], "path": ["rooms", "{{roomId}}"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Room detail', function() {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "  pm.expect(json.data).to.have.property('id');",
+                  "  pm.expect(json.data).to.have.property('name');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Room Availability",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rooms/{{roomId}}/availability?date=2026-02-10",
+              "host": ["{{baseUrl}}"],
+              "path": ["rooms", "{{roomId}}", "availability"],
+              "query": [{ "key": "date", "value": "2026-02-10" }]
+            }
+          }
+        },
+        {
+          "name": "List Buildings",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/buildings", "host": ["{{baseUrl}}"], "path": ["buildings"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Bookings",
+      "item": [
+        {
+          "name": "Bookings by Room + Date",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rooms/{{roomId}}/bookings?date=2026-02-10",
+              "host": ["{{baseUrl}}"],
+              "path": ["rooms", "{{roomId}}", "bookings"],
+              "query": [{ "key": "date", "value": "2026-02-10" }]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Bookings list with User organizer', function() {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "  pm.expect(json.data).to.be.an('array');",
+                  "  if (json.data.length > 0) {",
+                  "    var b = json.data[0];",
+                  "    pm.expect(b.organizer).to.be.an('object');",
+                  "    pm.expect(b.organizer).to.have.property('id');",
+                  "    pm.expect(b.organizer).to.have.property('name');",
+                  "    pm.expect(b.organizer).to.have.property('email');",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Booking",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"roomId\": \"00000000-0000-0000-0000-000000000001\",\n  \"title\": \"Ad-hoc Sync\",\n  \"description\": \"Quick alignment meeting\",\n  \"startTime\": \"2026-02-11T11:00:00Z\",\n  \"endTime\": \"2026-02-11T11:30:00Z\",\n  \"attendeeIds\": []\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/bookings", "host": ["{{baseUrl}}"], "path": ["bookings"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Booking created', function() {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "  pm.expect(json.data).to.have.property('id');",
+                  "  pm.collectionVariables.set('bookingId', json.data.id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Booking (conflict → 409)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"roomId\": \"00000000-0000-0000-0000-000000000001\",\n  \"title\": \"Conflicting Meeting\",\n  \"startTime\": \"2026-02-11T11:00:00Z\",\n  \"endTime\": \"2026-02-11T11:30:00Z\",\n  \"attendeeIds\": []\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/bookings", "host": ["{{baseUrl}}"], "path": ["bookings"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Conflict 409', function() {",
+                  "  pm.expect(pm.response.code).to.eql(409);",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.false;",
+                  "  pm.expect(json.message).to.include('already booked');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update Booking",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Updated: Ad-hoc Sync\",\n  \"endTime\": \"2026-02-11T12:00:00Z\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/bookings/{{bookingId}}", "host": ["{{baseUrl}}"], "path": ["bookings", "{{bookingId}}"] }
+          }
+        },
+        {
+          "name": "Check In",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/bookings/{{bookingId}}/checkin", "host": ["{{baseUrl}}"], "path": ["bookings", "{{bookingId}}", "checkin"] }
+          }
+        },
+        {
+          "name": "End Booking Early",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/bookings/{{bookingId}}/end", "host": ["{{baseUrl}}"], "path": ["bookings", "{{bookingId}}", "end"] }
+          }
+        },
+        {
+          "name": "Cancel Booking",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/bookings/{{bookingId}}", "host": ["{{baseUrl}}"], "path": ["bookings", "{{bookingId}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Panel (Mobile)",
+      "item": [
+        {
+          "name": "Room State (no auth)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/rooms/{{roomId}}/state", "host": ["{{baseUrl}}"], "path": ["rooms", "{{roomId}}", "state"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('RoomState mobile shape', function() {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "  var d = json.data;",
+                  "  pm.expect(d).to.have.property('room');",
+                  "  pm.expect(d).to.have.property('status');",
+                  "  pm.expect(['available','occupied','upcoming','offline']).to.include(d.status);",
+                  "  pm.expect(d).to.have.property('currentMeeting');",
+                  "  pm.expect(d).to.have.property('nextMeeting');",
+                  "  pm.expect(d).to.have.property('upcomingMeetings');",
+                  "  pm.expect(d).to.have.property('lastUpdated');",
+                  "  if (d.currentMeeting) {",
+                  "    pm.expect(d.currentMeeting.organizer).to.be.a('string');",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Mobile Check-In",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/meetings/{{bookingId}}/checkin", "host": ["{{baseUrl}}"], "path": ["meetings", "{{bookingId}}", "checkin"] }
+          }
+        },
+        {
+          "name": "Mobile End Early",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/meetings/{{bookingId}}/end", "host": ["{{baseUrl}}"], "path": ["meetings", "{{bookingId}}", "end"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Analytics",
+      "item": [
+        {
+          "name": "KPI Summary",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/analytics/kpi?startDate={{startDate}}&endDate={{endDate}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["analytics", "kpi"],
+              "query": [
+                { "key": "startDate", "value": "{{startDate}}" },
+                { "key": "endDate", "value": "{{endDate}}" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('KPI data', function() {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "  pm.expect(json.data).to.be.an('array');",
+                  "  pm.expect(json.data.length).to.eql(4);",
+                  "  json.data.forEach(function(kpi) {",
+                  "    pm.expect(kpi).to.have.property('label');",
+                  "    pm.expect(kpi).to.have.property('value');",
+                  "  });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Utilization",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/analytics/utilization?startDate={{startDate}}&endDate={{endDate}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["analytics", "utilization"],
+              "query": [
+                { "key": "startDate", "value": "{{startDate}}" },
+                { "key": "endDate", "value": "{{endDate}}" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Utilization data', function() {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "  pm.expect(json.data).to.be.an('array');",
+                  "  if (json.data.length > 0) {",
+                  "    var u = json.data[0];",
+                  "    pm.expect(u).to.have.property('roomId');",
+                  "    pm.expect(u).to.have.property('roomName');",
+                  "    pm.expect(u).to.have.property('utilizationRate');",
+                  "    pm.expect(u).to.have.property('totalBookings');",
+                  "    pm.expect(u).to.have.property('totalHoursBooked');",
+                  "    pm.expect(u).to.have.property('peakHours');",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Utilization (filtered by building)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/analytics/utilization?startDate={{startDate}}&endDate={{endDate}}&building=HQ",
+              "host": ["{{baseUrl}}"],
+              "path": ["analytics", "utilization"],
+              "query": [
+                { "key": "startDate", "value": "{{startDate}}" },
+                { "key": "endDate", "value": "{{endDate}}" },
+                { "key": "building", "value": "HQ" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Ghosting",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/analytics/ghosting?startDate={{startDate}}&endDate={{endDate}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["analytics", "ghosting"],
+              "query": [
+                { "key": "startDate", "value": "{{startDate}}" },
+                { "key": "endDate", "value": "{{endDate}}" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Ghosting data', function() {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "  pm.expect(json.data).to.be.an('array');",
+                  "  if (json.data.length > 0) {",
+                  "    var g = json.data[0];",
+                  "    pm.expect(g).to.have.property('roomId');",
+                  "    pm.expect(g).to.have.property('ghostingRate');",
+                  "    pm.expect(g).to.have.property('totalNoShows');",
+                  "    pm.expect(g).to.have.property('averageWastedMinutes');",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Capacity",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/analytics/capacity?startDate={{startDate}}&endDate={{endDate}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["analytics", "capacity"],
+              "query": [
+                { "key": "startDate", "value": "{{startDate}}" },
+                { "key": "endDate", "value": "{{endDate}}" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Capacity data', function() {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "  pm.expect(json.data).to.be.an('array');",
+                  "  if (json.data.length > 0) {",
+                  "    var c = json.data[0];",
+                  "    pm.expect(c).to.have.property('roomCapacity');",
+                  "    pm.expect(c).to.have.property('averageAttendees');",
+                  "    pm.expect(c).to.have.property('capacityUtilization');",
+                  "    pm.expect(c).to.have.property('oversizedBookings');",
+                  "    pm.expect(c).to.have.property('undersizedBookings');",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Heatmap",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/analytics/heatmap?startDate={{startDate}}&endDate={{endDate}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["analytics", "heatmap"],
+              "query": [
+                { "key": "startDate", "value": "{{startDate}}" },
+                { "key": "endDate", "value": "{{endDate}}" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Heatmap grid', function() {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "  pm.expect(json.data).to.be.an('array');",
+                  "  if (json.data.length > 0) {",
+                  "    var cell = json.data[0];",
+                  "    pm.expect(cell).to.have.property('day');",
+                  "    pm.expect(cell).to.have.property('hour');",
+                  "    pm.expect(cell).to.have.property('value');",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Room Comparison",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/analytics/rooms/compare?startDate={{startDate}}&endDate={{endDate}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["analytics", "rooms", "compare"],
+              "query": [
+                { "key": "startDate", "value": "{{startDate}}" },
+                { "key": "endDate", "value": "{{endDate}}" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Room comparison', function() {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "  pm.expect(json.data).to.be.an('array');",
+                  "  if (json.data.length > 0) {",
+                  "    var r = json.data[0];",
+                  "    pm.expect(r).to.have.property('roomId');",
+                  "    pm.expect(r).to.have.property('utilization');",
+                  "    pm.expect(r).to.have.property('ghosting');",
+                  "    pm.expect(r).to.have.property('capacity');",
+                  "    pm.expect(r).to.have.property('bookings');",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Trends",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/analytics/trends?startDate={{startDate}}&endDate={{endDate}}&metric=utilization",
+              "host": ["{{baseUrl}}"],
+              "path": ["analytics", "trends"],
+              "query": [
+                { "key": "startDate", "value": "{{startDate}}" },
+                { "key": "endDate", "value": "{{endDate}}" },
+                { "key": "metric", "value": "utilization" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Trend data', function() {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "  pm.expect(json.data).to.be.an('array');",
+                  "  if (json.data.length > 0) {",
+                  "    pm.expect(json.data[0]).to.have.property('date');",
+                  "    pm.expect(json.data[0]).to.have.property('value');",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Export CSV",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/analytics/export?startDate={{startDate}}&endDate={{endDate}}&format=csv",
+              "host": ["{{baseUrl}}"],
+              "path": ["analytics", "export"],
+              "query": [
+                { "key": "startDate", "value": "{{startDate}}" },
+                { "key": "endDate", "value": "{{endDate}}" },
+                { "key": "format", "value": "csv" }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

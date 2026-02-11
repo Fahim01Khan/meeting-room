@@ -1,9 +1,9 @@
 // Cache service for Panel App
 // Provides offline support and data persistence
+// Uses an in-memory cache; swap to AsyncStorage in production builds.
 
 import type { RoomState } from '../types/meeting';
 
-const CACHE_KEY_PREFIX = 'panel_cache_';
 const CACHE_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
 
 interface CacheEntry<T> {
@@ -11,46 +11,31 @@ interface CacheEntry<T> {
   timestamp: number;
 }
 
+const memoryCache = new Map<string, string>();
+
+function cacheKey(roomId: string): string {
+  return `panel_cache_room_${roomId}`;
+}
+
 export const cacheRoomState = async (roomId: string, state: RoomState): Promise<void> => {
-  // TODO: implement AsyncStorage or similar
-  console.log(`Caching room state for: ${roomId}`);
-  
-  const entry: CacheEntry<RoomState> = {
-    data: state,
-    timestamp: Date.now(),
-  };
-  
-  // Placeholder: In React Native, use AsyncStorage
   try {
-    const key = `${CACHE_KEY_PREFIX}room_${roomId}`;
-    // await AsyncStorage.setItem(key, JSON.stringify(entry));
-    console.log(`Cached data with key: ${key}`);
+    const entry: CacheEntry<RoomState> = { data: state, timestamp: Date.now() };
+    memoryCache.set(cacheKey(roomId), JSON.stringify(entry));
   } catch (error) {
     console.error('Failed to cache room state:', error);
   }
 };
 
 export const getCachedRoomState = async (roomId: string): Promise<RoomState | null> => {
-  // TODO: implement AsyncStorage or similar
-  console.log(`Getting cached room state for: ${roomId}`);
-  
   try {
-    const key = `${CACHE_KEY_PREFIX}room_${roomId}`;
-    // const cached = await AsyncStorage.getItem(key);
-    const cached = null; // Placeholder
-    
-    if (!cached) {
-      return null;
-    }
-    
-    const entry: CacheEntry<RoomState> = JSON.parse(cached);
-    
-    // Check if cache is expired
+    const raw = memoryCache.get(cacheKey(roomId));
+    if (!raw) return null;
+
+    const entry: CacheEntry<RoomState> = JSON.parse(raw);
     if (Date.now() - entry.timestamp > CACHE_EXPIRY_MS) {
-      console.log('Cache expired');
+      memoryCache.delete(cacheKey(roomId));
       return null;
     }
-    
     return entry.data;
   } catch (error) {
     console.error('Failed to get cached room state:', error);
@@ -59,16 +44,11 @@ export const getCachedRoomState = async (roomId: string): Promise<RoomState | nu
 };
 
 export const clearCache = async (): Promise<void> => {
-  // TODO: implement AsyncStorage clear
-  console.log('Clearing all cache');
+  memoryCache.clear();
 };
 
 export const clearRoomCache = async (roomId: string): Promise<void> => {
-  // TODO: implement AsyncStorage remove
-  console.log(`Clearing cache for room: ${roomId}`);
-  
-  const key = `${CACHE_KEY_PREFIX}room_${roomId}`;
-  // await AsyncStorage.removeItem(key);
+  memoryCache.delete(cacheKey(roomId));
 };
 
 export const isCacheValid = async (roomId: string): Promise<boolean> => {

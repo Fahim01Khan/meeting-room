@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme';
-import type { DateRange } from '../../types/analytics';
+import type { DateRange, KPIData } from '../../types/analytics';
 import { DateRangePicker } from '../../components/DateRangePicker';
 import { KPIStat } from '../../components/KPIStat';
+import { fetchGhostingData } from '../../services/analytics';
 
 export const GhostingView: React.FC = () => {
   const [dateRange, setDateRange] = useState<DateRange>({
@@ -91,21 +92,39 @@ export const GhostingView: React.FC = () => {
     color: colors.text,
   };
 
-  // Mock ghosting data
-  const ghostingStats = [
-    { label: 'Ghosting Rate', value: '18%', change: -3, changeType: 'positive' as const },
-    { label: 'No-Shows Today', value: 12, change: 2, changeType: 'negative' as const },
-    { label: 'Wasted Hours', value: '24h', change: -15, changeType: 'positive' as const },
-    { label: 'Recovery Rate', value: '65%', change: 8, changeType: 'positive' as const },
-  ];
+  // Ghosting data from API
+  const [ghostingStats, setGhostingStats] = useState<KPIData[]>([]);
+  const [topOffenders, setTopOffenders] = useState<{ room: string; ghostRate: number; noShows: number; wastedMins: number }[]>([]);
 
-  const topOffenders = [
-    { room: 'Huddle 1', ghostRate: 32, noShows: 28, wastedMins: 420 },
-    { room: 'Meeting B', ghostRate: 25, noShows: 21, wastedMins: 315 },
-    { room: 'Conference C', ghostRate: 22, noShows: 18, wastedMins: 270 },
-    { room: 'Huddle 2', ghostRate: 18, noShows: 15, wastedMins: 225 },
-    { room: 'Training Room', ghostRate: 15, noShows: 12, wastedMins: 180 },
-  ];
+  useEffect(() => {
+    fetchGhostingData(dateRange)
+      .then((data) => {
+        // Derive KPI summary cards
+        const totalBookings = data.reduce((s, d) => s + d.totalBookings, 0);
+        const totalNoShows = data.reduce((s, d) => s + d.totalNoShows, 0);
+        const avgRate = totalBookings > 0 ? Math.round((totalNoShows / totalBookings) * 100) : 0;
+        const totalWastedHours = Math.round(data.reduce((s, d) => s + d.averageWastedMinutes * d.totalNoShows, 0) / 60);
+
+        setGhostingStats([
+          { label: 'Ghosting Rate', value: `${avgRate}%`, changeType: 'neutral' },
+          { label: 'No-Shows', value: totalNoShows, changeType: 'negative' },
+          { label: 'Wasted Hours', value: `${totalWastedHours}h`, changeType: 'negative' },
+          { label: 'Rooms Tracked', value: data.length, changeType: 'neutral' },
+        ]);
+
+        // Top offenders table
+        const sorted = [...data].sort((a, b) => b.ghostingRate - a.ghostingRate);
+        setTopOffenders(
+          sorted.slice(0, 5).map((d) => ({
+            room: d.roomName,
+            ghostRate: d.ghostingRate,
+            noShows: d.totalNoShows,
+            wastedMins: Math.round(d.averageWastedMinutes * d.totalNoShows),
+          })),
+        );
+      })
+      .catch(console.error);
+  }, [dateRange]);
 
   return (
     <div style={containerStyle}>

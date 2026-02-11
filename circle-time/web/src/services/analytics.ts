@@ -1,5 +1,6 @@
 // Analytics-related API services
 
+import { apiClient } from './api';
 import type {
   UtilizationData,
   GhostingData,
@@ -10,62 +11,71 @@ import type {
   RoomComparison,
 } from '../types/analytics';
 
+function dateQs(dateRange: DateRange): string {
+  return `startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`;
+}
+
 export const fetchUtilizationData = async (dateRange: DateRange): Promise<UtilizationData[]> => {
-  // TODO: wire data source
-  console.log('Fetching utilization data:', dateRange);
-  return [];
+  const res = await apiClient.get<UtilizationData[]>(`/analytics/utilization?${dateQs(dateRange)}`);
+  return res.data;
 };
 
 export const fetchGhostingData = async (dateRange: DateRange): Promise<GhostingData[]> => {
-  // TODO: wire data source
-  console.log('Fetching ghosting data:', dateRange);
-  return [];
+  const res = await apiClient.get<GhostingData[]>(`/analytics/ghosting?${dateQs(dateRange)}`);
+  return res.data;
 };
 
 export const fetchCapacityData = async (dateRange: DateRange): Promise<CapacityData[]> => {
-  // TODO: wire data source
-  console.log('Fetching capacity data:', dateRange);
-  return [];
+  const res = await apiClient.get<CapacityData[]>(`/analytics/capacity?${dateQs(dateRange)}`);
+  return res.data;
 };
 
 export const fetchKPIData = async (dateRange: DateRange): Promise<KPIData[]> => {
-  // TODO: wire data source
-  console.log('Fetching KPI data:', dateRange);
-  return [];
+  const res = await apiClient.get<KPIData[]>(`/analytics/kpi?${dateQs(dateRange)}`);
+  return res.data;
 };
 
 export const fetchHeatmapData = async (
   dateRange: DateRange,
-  metric: 'utilization' | 'ghosting' | 'bookings'
+  _metric: 'utilization' | 'ghosting' | 'bookings',
 ): Promise<HeatmapCell[]> => {
-  // TODO: wire data source
-  console.log(`Fetching heatmap data for ${metric}:`, dateRange);
-  return [];
+  const res = await apiClient.get<HeatmapCell[]>(`/analytics/heatmap?${dateQs(dateRange)}`);
+  return res.data;
 };
 
 export const fetchRoomComparison = async (
   roomIds: string[],
-  dateRange: DateRange
+  dateRange: DateRange,
 ): Promise<RoomComparison[]> => {
-  // TODO: wire data source
-  console.log('Fetching room comparison:', roomIds, dateRange);
-  return [];
+  const qs = roomIds.length ? `&roomIds=${roomIds.join(',')}` : '';
+  const res = await apiClient.get<RoomComparison[]>(
+    `/analytics/rooms/compare?${dateQs(dateRange)}${qs}`,
+  );
+  return res.data;
 };
 
 export const fetchTrendData = async (
   metric: string,
-  dateRange: DateRange
+  dateRange: DateRange,
 ): Promise<{ date: string; value: number }[]> => {
-  // TODO: wire data source
-  console.log(`Fetching trend data for ${metric}:`, dateRange);
-  return [];
+  const res = await apiClient.get<{ date: string; value: number }[]>(
+    `/analytics/trends?${dateQs(dateRange)}&metric=${metric}`,
+  );
+  return res.data;
 };
 
 export const exportAnalyticsReport = async (
   dateRange: DateRange,
-  format: 'csv' | 'pdf'
+  format: 'csv' | 'pdf',
 ): Promise<Blob | null> => {
-  // TODO: wire data source
-  console.log(`Exporting report as ${format}:`, dateRange);
+  if (format !== 'csv') return null; // Only CSV supported currently
+  const res = await apiClient.get<Response>(
+    `/analytics/export?${dateQs(dateRange)}&format=csv`,
+  );
+  // The apiClient returns the raw Response for non-JSON content-types
+  const raw = res.data as unknown as Response;
+  if (raw && typeof raw.blob === 'function') {
+    return raw.blob();
+  }
   return null;
 };
