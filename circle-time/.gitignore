@@ -86,3 +86,4 @@ backend/staticfiles/
 # =========================
 coverage/
 *.lcov
+.idea/
