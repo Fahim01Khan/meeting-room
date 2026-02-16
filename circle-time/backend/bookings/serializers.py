@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from bookings.models import Booking, BookingAttendee
+from bookings.constants import BookingStatus
 from accounts.serializers import UserSerializer
 
 
@@ -23,6 +24,8 @@ class BookingSerializer(serializers.ModelSerializer):
     """
     Web-facing booking serializer.
     Contract: organizer = User object, attendees = User[]
+    
+    Uses BookingStatus enum for type safety.
     """
     roomId = serializers.SerializerMethodField()
     roomName = serializers.CharField(source="room.name", read_only=True)
@@ -32,6 +35,8 @@ class BookingSerializer(serializers.ModelSerializer):
     endTime = serializers.DateTimeField(source="end_time")
     checkedIn = serializers.BooleanField(source="checked_in", read_only=True)
     checkedInAt = serializers.DateTimeField(source="checked_in_at", read_only=True, allow_null=True)
+    isRecurring = serializers.BooleanField(source="is_recurring", required=False, default=False)
+    recurrenceType = serializers.CharField(source="recurrence_type", required=False, default="none")
 
     class Meta:
         model = Booking
@@ -39,6 +44,7 @@ class BookingSerializer(serializers.ModelSerializer):
             "id", "roomId", "roomName", "title", "description",
             "organizer", "attendees", "startTime", "endTime",
             "status", "checkedIn", "checkedInAt",
+            "isRecurring", "recurrenceType",
         ]
 
     def get_roomId(self, obj):

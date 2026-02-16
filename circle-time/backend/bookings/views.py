@@ -10,6 +10,8 @@ from bookings.serializers import (
     BookingCreateSerializer,
     BookingUpdateSerializer,
 )
+from bookings.constants import BookingStatus
+from bookings.utils import check_booking_conflicts
 from rooms.models import Room
 from providers.gateway import get_provider
 
@@ -19,16 +21,13 @@ from providers.gateway import get_provider
 # ---------------------------------------------------------------------------
 
 def _check_overlap(room_id, start, end, exclude_booking_id=None):
-    """Return True if there is a time-overlap conflict for the room."""
-    qs = Booking.objects.filter(
-        room_id=room_id,
-        status__in=["confirmed", "checked_in"],
-        start_time__lt=end,
-        end_time__gt=start,
-    )
-    if exclude_booking_id:
-        qs = qs.exclude(id=exclude_booking_id)
-    return qs.exists()
+    """
+    Return True if there is a time-overlap conflict for the room.
+    
+    DEPRECATED: Use check_booking_conflicts from bookings.utils instead.
+    This function is kept for backwards compatibility but will be removed.
+    """
+    return check_booking_conflicts(room_id, start, end, exclude_booking_id)
 
 
 # ---------------------------------------------------------------------------
