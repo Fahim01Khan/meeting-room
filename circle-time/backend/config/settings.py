@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 from datetime import timedelta
+import dj_database_url
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -65,39 +66,24 @@ WSGI_APPLICATION = "config.wsgi.application"
 ASGI_APPLICATION = "config.asgi.application"
 
 # ---------------------------------------------------------------------------
-# Database – parse DATABASE_URL or fall back to individual env vars
+# Database – using dj-database-url for robust parsing
 # ---------------------------------------------------------------------------
-_database_url = os.environ.get("DATABASE_URL", "")
-if _database_url:
-    import re
-    _m = re.match(
-        r"postgres(?:ql)?://(?P<user>[^:]+):(?P<password>[^@]+)@(?P<host>[^:]+):(?P<port>\d+)/(?P<name>.+)",
-        _database_url,
+# Build default DATABASE_URL from individual env vars if not provided
+_default_db_url = (
+    f"postgresql://{os.environ.get('DB_USER', 'circletime')}:"
+    f"{os.environ.get('DB_PASSWORD', 'ct_dev_pass')}@"
+    f"{os.environ.get('DB_HOST', 'localhost')}:"
+    f"{os.environ.get('DB_PORT', '5432')}/"
+    f"{os.environ.get('DB_NAME', 'circletime_dev')}"
+)
+
+DATABASES = {
+    "default": dj_database_url.config(
+        default=_default_db_url,
+        conn_max_age=600,  # Connection pooling (10 minutes)
+        conn_health_checks=True,  # Verify connections before use
     )
-    if _m:
-        DATABASES = {
-            "default": {
-                "ENGINE": "django.db.backends.postgresql",
-                "NAME": _m.group("name"),
-                "USER": _m.group("user"),
-                "PASSWORD": _m.group("password"),
-                "HOST": _m.group("host"),
-                "PORT": _m.group("port"),
-            }
-        }
-    else:
-        raise ValueError(f"Cannot parse DATABASE_URL: {_database_url}")
-else:
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.postgresql",
-            "NAME": os.environ.get("DB_NAME", "circletime_dev"),
-            "USER": os.environ.get("DB_USER", "circletime"),
-            "PASSWORD": os.environ.get("DB_PASSWORD", "ct_dev_pass"),
-            "HOST": os.environ.get("DB_HOST", "localhost"),
-            "PORT": os.environ.get("DB_PORT", "5432"),
-        }
-    }
+}
 
 AUTH_USER_MODEL = "accounts.User"
 
