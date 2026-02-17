@@ -1,9 +1,13 @@
 ### Circle Time — API Test File (VS Code REST Client)
 ### All responses use envelope: { "success": boolean, "data": <payload|null>, "message"?: string }
+###
+### SETUP:
+###   1. Start server: python manage.py runserver
+###   2. Run the Login request first (sets {{token}} automatically)
+###   3. All other requests use {{token}} automatically
 
 @baseUrl = http://localhost:8000/api
-@roomId = 00000000-0000-0000-0000-000000000001
-@roomId2 = 00000000-0000-0000-0000-000000000002
+@roomId  = 00000000-0000-0000-0000-000000000001
 
 ### =========================================================================
 ### Health Check
@@ -12,18 +16,19 @@
 ### Health
 GET {{baseUrl}}/health HTTP/1.1
 
+
 ### =========================================================================
 ### Auth
 ### =========================================================================
 
-### Login (dev email+password → JWT)
+### Login (sets {{token}} automatically for all requests below)
 # @name login
 POST {{baseUrl}}/auth/login HTTP/1.1
 Content-Type: application/json
 
 {
-  "email": "admin@example.com",
-  "password": "pass1234"
+  "email": "admin@circletime.io",
+  "password": "admin123"
 }
 
 ###
@@ -39,6 +44,7 @@ GET {{baseUrl}}/auth/oidc/login HTTP/1.1
 ### OIDC Callback (stub — 501 in local mode)
 GET {{baseUrl}}/auth/oidc/callback HTTP/1.1
 
+
 ### =========================================================================
 ### Rooms
 ### =========================================================================
@@ -47,42 +53,43 @@ GET {{baseUrl}}/auth/oidc/callback HTTP/1.1
 GET {{baseUrl}}/rooms HTTP/1.1
 Authorization: Bearer {{token}}
 
-### List rooms with filters (camelCase)
-GET {{baseUrl}}/rooms?building=HQ&floor=1&minCapacity=6&amenities=whiteboard,projector&searchQuery=conference HTTP/1.1
+### List rooms with filters
+GET {{baseUrl}}/rooms?building=Main%20Building&floor=1&minCapacity=6&amenities=whiteboard,projector HTTP/1.1
 Authorization: Bearer {{token}}
 
 ### Get room by ID
 GET {{baseUrl}}/rooms/{{roomId}} HTTP/1.1
 Authorization: Bearer {{token}}
 
-### Room availability
-GET {{baseUrl}}/rooms/{{roomId}}/availability?date=2026-02-10 HTTP/1.1
+### Room availability for a date
+GET {{baseUrl}}/rooms/{{roomId}}/availability?date=2026-03-02 HTTP/1.1
 Authorization: Bearer {{token}}
 
 ### List buildings
 GET {{baseUrl}}/buildings HTTP/1.1
 Authorization: Bearer {{token}}
 
+
 ### =========================================================================
-### Bookings
+### Bookings — Single
 ### =========================================================================
 
-### Bookings by room + date (organizer = User object)
-GET {{baseUrl}}/rooms/{{roomId}}/bookings?date=2026-02-10 HTTP/1.1
+### Get bookings for a room on a date
+GET {{baseUrl}}/rooms/{{roomId}}/bookings?date=2026-03-02 HTTP/1.1
 Authorization: Bearer {{token}}
 
-### Create booking (server enforces conflict → 409 on overlap)
+### Create single booking
 # @name createBooking
 POST {{baseUrl}}/bookings HTTP/1.1
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-  "roomId": "00000000-0000-0000-0000-000000000001",
+  "roomId": "{{roomId}}",
   "title": "Ad-hoc Sync",
   "description": "Quick alignment meeting",
-  "startTime": "2026-02-11T11:00:00Z",
-  "endTime": "2026-02-11T11:30:00Z",
+  "startTime": "2026-03-10T09:00:00Z",
+  "endTime": "2026-03-10T09:30:00Z",
   "attendeeIds": []
 }
 
@@ -96,7 +103,7 @@ Content-Type: application/json
 
 {
   "title": "Updated: Ad-hoc Sync",
-  "endTime": "2026-02-11T12:00:00Z"
+  "endTime": "2026-03-10T10:00:00Z"
 }
 
 ### Check in to booking
@@ -117,12 +124,194 @@ Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-  "roomId": "00000000-0000-0000-0000-000000000001",
+  "roomId": "{{roomId}}",
   "title": "Conflicting Meeting",
-  "startTime": "2026-02-11T11:00:00Z",
-  "endTime": "2026-02-11T11:30:00Z",
+  "startTime": "2026-03-10T09:00:00Z",
+  "endTime": "2026-03-10T09:30:00Z",
   "attendeeIds": []
 }
+
+
+### =========================================================================
+### Bookings — Recurring (Day 3)
+### =========================================================================
+
+### Create weekly recurring booking (Mon + Wed for 4 weeks)
+# @name createRecurring
+POST {{baseUrl}}/bookings/recurring HTTP/1.1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "roomId": "{{roomId}}",
+  "title": "Weekly Team Standup",
+  "description": "Every Monday and Wednesday",
+  "startTime": "2026-04-06T09:00:00Z",
+  "endTime": "2026-04-06T10:00:00Z",
+  "attendeeIds": [],
+  "recurrenceType": "weekly",
+  "recurrenceEndDate": "2026-05-04",
+  "recurrencePattern": {
+    "days": [0, 2],
+    "interval": 1
+  }
+}
+
+###
+@recurringParentId = {{createRecurring.response.body.data.parentBookingId}}
+
+### Create daily recurring booking (every day for 10 days)
+POST {{baseUrl}}/bookings/recurring HTTP/1.1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "roomId": "{{roomId}}",
+  "title": "Daily Scrum",
+  "description": "Every day for 10 days",
+  "startTime": "2026-04-14T14:00:00Z",
+  "endTime": "2026-04-14T14:30:00Z",
+  "attendeeIds": [],
+  "recurrenceType": "daily",
+  "recurrenceEndDate": "2026-04-24",
+  "recurrencePattern": {
+    "interval": 1
+  }
+}
+
+### Create monthly recurring booking (15th of each month)
+POST {{baseUrl}}/bookings/recurring HTTP/1.1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "roomId": "{{roomId}}",
+  "title": "Monthly All-Hands",
+  "description": "15th of every month for 6 months",
+  "startTime": "2026-05-15T15:00:00Z",
+  "endTime": "2026-05-15T16:00:00Z",
+  "attendeeIds": [],
+  "recurrenceType": "monthly",
+  "recurrenceEndDate": "2026-10-15",
+  "recurrencePattern": {
+    "day_of_month": 15,
+    "interval": 1
+  }
+}
+
+### ERROR: Too many occurrences (expect 400)
+POST {{baseUrl}}/bookings/recurring HTTP/1.1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "roomId": "{{roomId}}",
+  "title": "Too Many Meetings",
+  "startTime": "2026-06-01T10:00:00Z",
+  "endTime": "2026-06-01T11:00:00Z",
+  "attendeeIds": [],
+  "recurrenceType": "daily",
+  "recurrenceEndDate": "2027-06-01",
+  "recurrencePattern": {
+    "interval": 1
+  }
+}
+
+### ERROR: Room not found (expect 404)
+POST {{baseUrl}}/bookings/recurring HTTP/1.1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "roomId": "00000000-0000-0000-0000-000000000000",
+  "title": "Invalid Room Test",
+  "startTime": "2026-04-06T10:00:00Z",
+  "endTime": "2026-04-06T11:00:00Z",
+  "attendeeIds": [],
+  "recurrenceType": "weekly",
+  "recurrenceEndDate": "2026-05-04",
+  "recurrencePattern": {
+    "days": [0],
+    "interval": 1
+  }
+}
+
+
+### =========================================================================
+### Bookings — Extensions (Day 3)
+### =========================================================================
+
+### Create a booking for extension testing
+# @name extensionTestBooking
+POST {{baseUrl}}/bookings HTTP/1.1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "roomId": "{{roomId}}",
+  "title": "Extension Test Meeting",
+  "startTime": "2026-04-07T14:00:00Z",
+  "endTime": "2026-04-07T15:00:00Z",
+  "attendeeIds": []
+}
+
+###
+@extBookingId = {{extensionTestBooking.response.body.data.id}}
+
+### Extend by 15 minutes (extension 1 of 4)
+POST {{baseUrl}}/bookings/{{extBookingId}}/extend HTTP/1.1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "extensionMinutes": 15
+}
+
+### Extend by 30 minutes (extension 2 of 4)
+POST {{baseUrl}}/bookings/{{extBookingId}}/extend HTTP/1.1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "extensionMinutes": 30
+}
+
+### Extend by 15 minutes (extension 3 of 4)
+POST {{baseUrl}}/bookings/{{extBookingId}}/extend HTTP/1.1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "extensionMinutes": 15
+}
+
+### Extend by 15 minutes (extension 4 of 4 — last allowed)
+POST {{baseUrl}}/bookings/{{extBookingId}}/extend HTTP/1.1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "extensionMinutes": 15
+}
+
+### ERROR: 5th extension (expect 400 — max reached)
+POST {{baseUrl}}/bookings/{{extBookingId}}/extend HTTP/1.1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "extensionMinutes": 15
+}
+
+### ERROR: Invalid minutes — not a 15-min increment (expect 400)
+POST {{baseUrl}}/bookings/{{extBookingId}}/extend HTTP/1.1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "extensionMinutes": 10
+}
+
 
 ### =========================================================================
 ### Panel (Mobile — no auth required)
@@ -139,12 +328,13 @@ Content-Type: application/json
 POST {{baseUrl}}/meetings/{{bookingId}}/end HTTP/1.1
 Content-Type: application/json
 
+
 ### =========================================================================
-### Analytics (Admin — all accept startDate & endDate)
+### Analytics
 ### =========================================================================
 
-@startDate = 2026-01-27
-@endDate = 2026-02-10
+@startDate = 2026-01-01
+@endDate   = 2026-03-31
 
 ### KPI summary
 GET {{baseUrl}}/analytics/kpi?startDate={{startDate}}&endDate={{endDate}} HTTP/1.1
@@ -155,7 +345,7 @@ GET {{baseUrl}}/analytics/utilization?startDate={{startDate}}&endDate={{endDate}
 Authorization: Bearer {{token}}
 
 ### Utilization filtered by building
-GET {{baseUrl}}/analytics/utilization?startDate={{startDate}}&endDate={{endDate}}&building=HQ HTTP/1.1
+GET {{baseUrl}}/analytics/utilization?startDate={{startDate}}&endDate={{endDate}}&building=Main%20Building HTTP/1.1
 Authorization: Bearer {{token}}
 
 ### Ghosting per room
@@ -166,7 +356,7 @@ Authorization: Bearer {{token}}
 GET {{baseUrl}}/analytics/capacity?startDate={{startDate}}&endDate={{endDate}} HTTP/1.1
 Authorization: Bearer {{token}}
 
-### Heatmap (day × hour)
+### Heatmap (day x hour)
 GET {{baseUrl}}/analytics/heatmap?startDate={{startDate}}&endDate={{endDate}} HTTP/1.1
 Authorization: Bearer {{token}}
 
@@ -178,6 +368,6 @@ Authorization: Bearer {{token}}
 GET {{baseUrl}}/analytics/trends?startDate={{startDate}}&endDate={{endDate}}&metric=utilization HTTP/1.1
 Authorization: Bearer {{token}}
 
-### Export (CSV)
+### Export CSV
 GET {{baseUrl}}/analytics/export?startDate={{startDate}}&endDate={{endDate}}&format=csv HTTP/1.1
 Authorization: Bearer {{token}}
