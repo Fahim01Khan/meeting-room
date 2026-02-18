@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { colors, spacing, typography, borderRadius } from '../styles/theme';
 import type { DateRange } from '../types/analytics';
+import styles from './DateRangePicker.module.css';
 
 interface DateRangePickerProps {
   value: DateRange;
@@ -22,79 +22,6 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
   onChange,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-
-  const containerStyle: React.CSSProperties = {
-    position: 'relative',
-    display: 'inline-block',
-  };
-
-  const buttonStyle: React.CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
-    gap: spacing.sm,
-    padding: `${spacing.sm} ${spacing.md}`,
-    backgroundColor: colors.background,
-    border: `1px solid ${colors.border}`,
-    borderRadius: borderRadius.md,
-    fontSize: typography.fontSize.sm,
-    color: colors.text,
-    cursor: 'pointer',
-  };
-
-  const dropdownStyle: React.CSSProperties = {
-    position: 'absolute',
-    top: '100%',
-    right: 0,
-    marginTop: spacing.xs,
-    backgroundColor: colors.background,
-    border: `1px solid ${colors.border}`,
-    borderRadius: borderRadius.md,
-    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-    zIndex: 100,
-    minWidth: '280px',
-    padding: spacing.md,
-  };
-
-  const presetButtonStyle: React.CSSProperties = {
-    display: 'block',
-    width: '100%',
-    padding: `${spacing.sm} ${spacing.md}`,
-    backgroundColor: 'transparent',
-    border: 'none',
-    borderRadius: borderRadius.sm,
-    fontSize: typography.fontSize.sm,
-    color: colors.text,
-    textAlign: 'left',
-    cursor: 'pointer',
-  };
-
-  const inputGroupStyle: React.CSSProperties = {
-    display: 'flex',
-    gap: spacing.sm,
-    marginTop: spacing.md,
-    paddingTop: spacing.md,
-    borderTop: `1px solid ${colors.border}`,
-  };
-
-  const inputContainerStyle: React.CSSProperties = {
-    flex: 1,
-  };
-
-  const labelStyle: React.CSSProperties = {
-    display: 'block',
-    fontSize: typography.fontSize.xs,
-    color: colors.textSecondary,
-    marginBottom: spacing.xs,
-  };
-
-  const inputStyle: React.CSSProperties = {
-    width: '100%',
-    padding: spacing.sm,
-    border: `1px solid ${colors.border}`,
-    borderRadius: borderRadius.sm,
-    fontSize: typography.fontSize.sm,
-    color: colors.text,
-  };
 
   const formatDate = (dateStr: string) => {
     if (!dateStr) return '';
@@ -132,10 +59,10 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
   };
 
   return (
-    <div style={containerStyle}>
+    <div className={styles.container}>
       <button
         type="button"
-        style={buttonStyle}
+        className={styles.button}
         onClick={() => setIsOpen(!isOpen)}
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -153,33 +80,33 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
       </button>
 
       {isOpen && (
-        <div style={dropdownStyle}>
+        <div className={styles.dropdown}>
           {defaultPresets.map((preset) => (
             <button
               key={preset.label}
               type="button"
-              style={presetButtonStyle}
+              className={styles.presetButton}
               onClick={() => handlePresetClick(preset.days)}
             >
               {preset.label}
             </button>
           ))}
 
-          <div style={inputGroupStyle}>
-            <div style={inputContainerStyle}>
-              <label style={labelStyle}>Start Date</label>
+          <div className={styles.inputGroup}>
+            <div className={styles.inputContainer}>
+              <label className={styles.label}>Start Date</label>
               <input
                 type="date"
-                style={inputStyle}
+                className={styles.input}
                 value={value.startDate}
                 onChange={handleStartDateChange}
               />
             </div>
-            <div style={inputContainerStyle}>
-              <label style={labelStyle}>End Date</label>
+            <div className={styles.inputContainer}>
+              <label className={styles.label}>End Date</label>
               <input
                 type="date"
-                style={inputStyle}
+                className={styles.input}
                 value={value.endDate}
                 onChange={handleEndDateChange}
               />

@@ -1,0 +1,93 @@
+/* DateRangePicker.module.css */
+
+.container {
+  position: relative;
+  display: inline-block;
+}
+
+.button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background-color: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #0F172A;
+  cursor: pointer;
+}
+
+.button:hover {
+  background-color: #F8FAFC;
+  border-color: #94A3B8;
+}
+
+.button:focus-visible {
+  outline: 2px solid #2563EB;
+  outline-offset: 2px;
+}
+
+.dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 4px;
+  background-color: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 100;
+  min-width: 280px;
+  padding: 16px;
+}
+
+.presetButton {
+  display: block;
+  width: 100%;
+  padding: 8px 16px;
+  background-color: transparent;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  color: #0F172A;
+  text-align: left;
+  cursor: pointer;
+}
+
+.presetButton:hover {
+  background-color: #F8FAFC;
+}
+
+.inputGroup {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #E2E8F0;
+}
+
+.inputContainer {
+  flex: 1;
+}
+
+.label {
+  display: block;
+  font-size: 12px;
+  color: #64748B;
+  margin-bottom: 4px;
+}
+
+.input {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #E2E8F0;
+  border-radius: 4px;
+  font-size: 14px;
+  color: #0F172A;
+}
+
+.input:focus-visible {
+  outline: 2px solid #2563EB;
+  outline-offset: 2px;
+}
