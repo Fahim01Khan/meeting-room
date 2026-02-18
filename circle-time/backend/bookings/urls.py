@@ -18,4 +18,7 @@ urlpatterns = [
     path("bookings/<uuid:booking_id>/checkin", checkin_booking, name="bookings-checkin"),
     path("bookings/<uuid:booking_id>/end", end_booking, name="bookings-end"),
     path("bookings/<uuid:booking_id>/extend", extend_booking, name="bookings-extend"),
+    # Mobile/kiosk aliases — same views, /meetings/ prefix
+    path("meetings/<uuid:booking_id>/checkin", checkin_booking, name="meetings-checkin"),
+    path("meetings/<uuid:booking_id>/end", end_booking, name="meetings-end"),
 ]

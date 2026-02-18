@@ -1,6 +1,6 @@
 from django.utils import timezone
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework import status
 from datetime import timedelta
@@ -563,9 +563,9 @@ def cancel_booking_impl(request, booking_id):
 # ---------------------------------------------------------------------------
 
 @api_view(["POST"])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def checkin_booking(request, booking_id):
-    """Check in to a booking (web-facing)."""
+    """Check in to a booking (also used by tablet kiosk via /meetings/<id>/checkin)."""
     try:
         booking = Booking.objects.get(id=booking_id)
     except Booking.DoesNotExist:
@@ -606,9 +606,9 @@ def checkin_booking(request, booking_id):
 # ---------------------------------------------------------------------------
 
 @api_view(["POST"])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def end_booking(request, booking_id):
-    """End a booking early."""
+    """End a booking early (also used by tablet kiosk via /meetings/<id>/end)."""
     try:
         booking = Booking.objects.get(id=booking_id)
     except Booking.DoesNotExist:

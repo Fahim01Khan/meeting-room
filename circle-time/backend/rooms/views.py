@@ -1,8 +1,9 @@
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework import status
 from django.db.models import Q
+from django.utils import timezone
 
 from rooms.models import Room, Building, FloorPlan
 from rooms.serializers import RoomSerializer, BuildingSerializer, FloorPlanSerializer
@@ -165,6 +166,130 @@ def room_availability(request, room_id):
         {"success": True, "data": slots},
         status=status.HTTP_200_OK,
     )
+
+
+# ---------------------------------------------------------------------------
+# GET /api/rooms/<room_id>/state  (kiosk — no auth required)
+# ---------------------------------------------------------------------------
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def room_state(request, room_id):
+    """
+    GET /api/rooms/<room_id>/state
+    Return the live state of a room for the tablet kiosk app.
+    No authentication required.
+    """
+    from bookings.models import Booking
+    from datetime import timedelta
+
+    try:
+        room = Room.objects.get(id=room_id)
+    except Room.DoesNotExist:
+        return Response(
+            {"success": False, "message": "Room not found"},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    now = timezone.now()
+    today = now.date()
+
+    # Room offline when under maintenance
+    if room.status == "maintenance":
+        return Response({
+            "success": True,
+            "data": {
+                "room": {
+                    "id": str(room.id),
+                    "name": room.name,
+                    "building": room.building,
+                    "floor": room.floor,
+                    "capacity": room.capacity,
+                },
+                "status": "offline",
+                "currentMeeting": None,
+                "nextMeeting": None,
+                "upcomingMeetings": [],
+                "lastUpdated": now.isoformat(),
+            },
+        })
+
+    # Active booking: overlaps now
+    active_booking = (
+        Booking.objects
+        .filter(
+            room=room,
+            start_time__lte=now,
+            end_time__gte=now,
+            status__in=["confirmed", "checked_in"],
+        )
+        .select_related("organizer")
+        .first()
+    )
+
+    # All remaining bookings for today after now, ordered by start
+    upcoming_qs = (
+        Booking.objects
+        .filter(
+            room=room,
+            start_time__date=today,
+            start_time__gt=now,
+            status__in=["confirmed", "checked_in"],
+        )
+        .select_related("organizer")
+        .order_by("start_time")
+    )
+
+    # Determine status
+    if active_booking is not None:
+        room_status = "occupied"
+    elif upcoming_qs.filter(start_time__lte=now + timedelta(minutes=30)).exists():
+        room_status = "upcoming"
+    else:
+        room_status = "available"
+
+    def _meeting_shape(booking):
+        if booking is None:
+            return None
+        organizer = booking.organizer
+        full_name = organizer.get_full_name().strip() if organizer else ""
+        organizer_name = full_name or (organizer.email if organizer else "")
+        try:
+            attendee_count = booking.booking_attendees.count()
+        except Exception:
+            attendee_count = 0
+        return {
+            "id": str(booking.id),
+            "title": booking.title,
+            "organizer": organizer_name,
+            "organizerEmail": organizer.email if organizer else "",
+            "startTime": booking.start_time.isoformat(),
+            "endTime": booking.end_time.isoformat(),
+            "attendeeCount": attendee_count,
+            "checkedIn": booking.status == "checked_in",
+            "checkedInAt": booking.checked_in_at.isoformat() if booking.checked_in_at else None,
+        }
+
+    upcoming_list = list(upcoming_qs)
+    next_meeting = upcoming_list[0] if upcoming_list else None
+
+    return Response({
+        "success": True,
+        "data": {
+            "room": {
+                "id": str(room.id),
+                "name": room.name,
+                "building": room.building,
+                "floor": room.floor,
+                "capacity": room.capacity,
+            },
+            "status": room_status,
+            "currentMeeting": _meeting_shape(active_booking),
+            "nextMeeting": _meeting_shape(next_meeting),
+            "upcomingMeetings": [_meeting_shape(b) for b in upcoming_list],
+            "lastUpdated": now.isoformat(),
+        },
+    })
 
 
 @api_view(["GET"])
