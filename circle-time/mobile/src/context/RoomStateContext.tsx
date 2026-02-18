@@ -22,46 +22,6 @@ const RoomStateContext = createContext<RoomStateContextValue | null>(null);
 // Configuration - would come from device setup in production
 const ROOM_ID = '00000000-0000-0000-0000-000000000001';
 
-// Mock data for UI development
-const mockRoomInfo: RoomInfo = {
-  id: ROOM_ID,
-  name: 'Conference Room A',
-  building: 'Main Building',
-  floor: 1,
-  capacity: 10,
-};
-
-const mockCurrentMeeting: Meeting = {
-  id: 'meeting-001',
-  title: 'Sprint Planning Session',
-  organizer: 'John Doe',
-  organizerEmail: 'john.doe@company.com',
-  startTime: new Date().toISOString(),
-  endTime: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-  attendeeCount: 6,
-  checkedIn: false,
-};
-
-const mockNextMeeting: Meeting = {
-  id: 'meeting-002',
-  title: 'Design Review',
-  organizer: 'Jane Smith',
-  organizerEmail: 'jane.smith@company.com',
-  startTime: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
-  endTime: new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString(),
-  attendeeCount: 4,
-  checkedIn: false,
-};
-
-const mockRoomState: RoomState = {
-  room: mockRoomInfo,
-  status: 'available',
-  currentMeeting: null,
-  nextMeeting: mockNextMeeting,
-  upcomingMeetings: [mockNextMeeting],
-  lastUpdated: new Date().toISOString(),
-};
-
 interface RoomStateProviderProps {
   children: ReactNode;
 }

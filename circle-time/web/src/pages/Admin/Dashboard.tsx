@@ -130,8 +130,8 @@ export const Dashboard: React.FC = () => {
                       domain={[0, 100]}
                     />
                     <Tooltip
-                      formatter={(v: number) => [`${v}%`, 'Utilization']}
-                      labelFormatter={(l: string) => new Date(l).toLocaleDateString()}
+                      formatter={(v: number | undefined) => { if (v === undefined) return ''; return [`${v}%`, 'Utilization']; }}
+                      labelFormatter={(l: unknown) => new Date(String(l)).toLocaleDateString()}
                     />
                     <Area type="monotone" dataKey="value" stroke={colors.primary} fill={colors.primaryLight} strokeWidth={2} />
                   </AreaChart>

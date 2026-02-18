@@ -15,7 +15,13 @@ export interface Booking {
   checkedInAt?: string;
 }
 
-export type BookingStatus = 'confirmed' | 'pending' | 'cancelled' | 'completed' | 'no_show';
+export type BookingStatus =
+  | "confirmed"
+  | "pending"
+  | "cancelled"
+  | "completed"
+  | "no_show"
+  | "checked_in";
 
 export interface User {
   id: string;

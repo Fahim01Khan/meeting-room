@@ -144,7 +144,7 @@ export const CapacityView: React.FC = () => {
               return (
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={({ name, percent }: { name: string; percent: number }) => `${name} ${Math.round(percent * 100)}%`}>
+                    <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={({ name, percent }: { name?: string; percent?: number }) => { if (!name || percent === undefined) return ''; return `${name} ${Math.round(percent * 100)}%`; }}>
                       {pieData.map((entry, i) => (
                         <Cell key={i} fill={entry.color} />
                       ))}

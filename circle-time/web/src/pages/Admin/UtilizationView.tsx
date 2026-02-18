@@ -164,8 +164,8 @@ export const UtilizationView: React.FC = () => {
                   domain={[0, 100]}
                 />
                 <Tooltip
-                  formatter={(v: number) => [`${v}%`, 'Utilization']}
-                  labelFormatter={(l: string) => new Date(l).toLocaleDateString()}
+                  formatter={(v: number | undefined) => { if (v === undefined) return ''; return [`${v}%`, 'Utilization']; }}
+                  labelFormatter={(l: unknown) => new Date(String(l)).toLocaleDateString()}
                 />
                 <Area type="monotone" dataKey="value" stroke={colors.primary} fill={colors.primaryLight} strokeWidth={2} />
               </AreaChart>
@@ -198,7 +198,7 @@ export const UtilizationView: React.FC = () => {
                     <CartesianGrid strokeDasharray="3 3" stroke={colors.border} />
                     <XAxis dataKey="hour" tick={{ fontSize: 11, fill: colors.textSecondary }} />
                     <YAxis tick={{ fontSize: 11, fill: colors.textSecondary }} />
-                    <Tooltip formatter={(v: number) => [v, 'Bookings']} />
+                    <Tooltip formatter={(v: number | undefined) => { if (v === undefined) return ''; return [v, 'Bookings']; }} />
                     <Bar dataKey="bookings" fill={colors.primary} radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
@@ -227,7 +227,7 @@ export const UtilizationView: React.FC = () => {
                     <CartesianGrid strokeDasharray="3 3" stroke={colors.border} />
                     <XAxis dataKey="day" tick={{ fontSize: 11, fill: colors.textSecondary }} />
                     <YAxis tick={{ fontSize: 11, fill: colors.textSecondary }} />
-                    <Tooltip formatter={(v: number) => [v, 'Bookings']} />
+                    <Tooltip formatter={(v: number | undefined) => { if (v === undefined) return ''; return [v, 'Bookings']; }} />
                     <Bar dataKey="bookings" fill={colors.success} radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
