@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { colors, spacing, typography, borderRadius } from '../../styles/theme';
 import type { Room, RoomFilter, Amenity } from '../../types/room';
-import { fetchRoomsFiltered } from '../../services/rooms';
+import { fetchRooms, fetchRoomsFiltered } from '../../services/rooms';
 import { RoomCard } from '../../components/RoomCard';
 import { LoadingState } from '../../components/LoadingState';
 
@@ -23,6 +23,8 @@ const amenityOptions: { value: Amenity; label: string }[] = [
 export const RoomSearch: React.FC<RoomSearchProps> = ({ onRoomSelect }) => {
   const [rooms, setRooms] = useState<Room[]>([]);
   const [loading, setLoading] = useState(true);
+  const [buildings, setBuildings] = useState<string[]>([]);
+  const [floors, setFloors] = useState<number[]>([]);
   const [filters, setFilters] = useState<RoomFilter>({
     building: '',
     floor: undefined,
@@ -30,6 +32,18 @@ export const RoomSearch: React.FC<RoomSearchProps> = ({ onRoomSelect }) => {
     amenities: [],
     searchQuery: '',
   });
+
+  // Fetch all rooms once to derive building/floor options
+  useEffect(() => {
+    fetchRooms()
+      .then((data) => {
+        const uniqueBuildings = Array.from(new Set(data.map((r) => r.building))).sort();
+        const uniqueFloors = Array.from(new Set(data.map((r) => r.floor))).sort((a, b) => a - b);
+        setBuildings(uniqueBuildings);
+        setFloors(uniqueFloors);
+      })
+      .catch(console.error);
+  }, []);
 
   useEffect(() => {
     const loadRooms = async () => {
@@ -166,9 +180,9 @@ export const RoomSearch: React.FC<RoomSearchProps> = ({ onRoomSelect }) => {
             onChange={(e) => setFilters((prev) => ({ ...prev, building: e.target.value }))}
           >
             <option value="">All Buildings</option>
-            <option value="main">Main Building</option>
-            <option value="executive">Executive Wing</option>
-            <option value="annex">Annex</option>
+            {buildings.map((b) => (
+              <option key={b} value={b}>{b}</option>
+            ))}
           </select>
         </div>
 
@@ -185,9 +199,9 @@ export const RoomSearch: React.FC<RoomSearchProps> = ({ onRoomSelect }) => {
             }
           >
             <option value="">All Floors</option>
-            <option value="1">Floor 1</option>
-            <option value="2">Floor 2</option>
-            <option value="3">Floor 3</option>
+            {floors.map((f) => (
+              <option key={f} value={f}>Floor {f}</option>
+            ))}
           </select>
         </div>
 

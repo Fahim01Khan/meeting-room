@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { colors, spacing, typography, borderRadius, shadows } from '../styles/theme';
-import { clearTokens } from '../services/api';
+import { clearTokens, apiClient } from '../services/api';
 
 interface NavItem {
   path: string;
@@ -88,6 +88,19 @@ const adminNavItems: NavItem[] = [
 export const Layout: React.FC = () => {
   const location = useLocation();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [user, setUser] = useState<{ name: string; role: string } | null>(null);
+
+  useEffect(() => {
+    apiClient.get<{ name: string; role: string; email: string }>('/auth/me')
+      .then((res) => setUser(res.data))
+      .catch(() => setUser(null));
+  }, []);
+
+  const userInitials = user
+    ? user.name.split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 2)
+    : '??';
+  const userName = user?.name ?? 'Loading...';
+  const userRole = user?.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : '';
 
   const layoutStyle: React.CSSProperties = {
     display: 'flex',
@@ -285,14 +298,14 @@ export const Layout: React.FC = () => {
             {/* Breadcrumb or page title could go here */}
           </div>
           <div style={userInfoStyle}>
-            <div style={avatarStyle}>JD</div>
+            <div style={avatarStyle}>{userInitials}</div>
             {!sidebarCollapsed && (
               <div>
                 <p style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.text }}>
-                  John Doe
+                  {userName}
                 </p>
                 <p style={{ fontSize: typography.fontSize.xs, color: colors.textSecondary }}>
-                  Admin
+                  {userRole}
                 </p>
               </div>
             )}

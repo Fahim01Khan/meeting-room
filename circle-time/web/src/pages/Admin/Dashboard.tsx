@@ -2,10 +2,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { colors, spacing, typography, borderRadius } from '../../styles/theme';
-import type { DateRange, KPIData, RoomComparison } from '../../types/analytics';
+import type { DateRange, KPIData, RoomComparison, HeatmapCell } from '../../types/analytics';
 import { KPIStat } from '../../components/KPIStat';
 import { DateRangePicker } from '../../components/DateRangePicker';
-import { fetchKPIData, fetchRoomComparison } from '../../services/analytics';
+import { fetchKPIData, fetchRoomComparison, fetchTrendData, fetchHeatmapData } from '../../services/analytics';
+import {
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+} from 'recharts';
 
 export const Dashboard: React.FC = () => {
   const [dateRange, setDateRange] = useState<DateRange>({
@@ -82,9 +85,13 @@ export const Dashboard: React.FC = () => {
 
   // KPI data from API
   const [kpiData, setKpiData] = useState<KPIData[]>([]);
+  const [trendData, setTrendData] = useState<{ date: string; value: number }[]>([]);
+  const [heatmapData, setHeatmapData] = useState<HeatmapCell[]>([]);
 
   useEffect(() => {
     fetchKPIData(dateRange).then(setKpiData).catch(console.error);
+    fetchTrendData('utilization', dateRange).then(setTrendData).catch(console.error);
+    fetchHeatmapData(dateRange, 'utilization').then(setHeatmapData).catch(console.error);
   }, [dateRange]);
 
   return (
@@ -107,23 +114,31 @@ export const Dashboard: React.FC = () => {
         <div style={sectionStyle}>
           <h2 style={sectionTitleStyle}>Utilization Trends</h2>
           <div style={chartContainerStyle}>
-            <div style={chartPlaceholderStyle}>
-              <div style={{ textAlign: 'center' }}>
-                <svg
-                  width="48"
-                  height="48"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke={colors.textMuted}
-                  strokeWidth="1.5"
-                >
-                  <path d="M3 3v18h18" />
-                  <path d="M18 17V9" />
-                  <path d="M13 17V5" />
-                  <path d="M8 17v-3" />
-                </svg>
-                <p style={{ marginTop: spacing.sm }}>Utilization Chart Placeholder</p>
-              </div>
+            <div style={{ height: '300px' }}>
+              {trendData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={trendData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={colors.border} />
+                    <XAxis
+                      dataKey="date"
+                      tick={{ fontSize: 12, fill: colors.textSecondary }}
+                      tickFormatter={(v: string) => new Date(v).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                    />
+                    <YAxis
+                      tick={{ fontSize: 12, fill: colors.textSecondary }}
+                      tickFormatter={(v: number) => `${v}%`}
+                      domain={[0, 100]}
+                    />
+                    <Tooltip
+                      formatter={(v: number) => [`${v}%`, 'Utilization']}
+                      labelFormatter={(l: string) => new Date(l).toLocaleDateString()}
+                    />
+                    <Area type="monotone" dataKey="value" stroke={colors.primary} fill={colors.primaryLight} strokeWidth={2} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              ) : (
+                <div style={chartPlaceholderStyle}>No trend data available</div>
+              )}
             </div>
           </div>
         </div>
@@ -131,7 +146,7 @@ export const Dashboard: React.FC = () => {
         <div style={sectionStyle}>
           <h2 style={sectionTitleStyle}>Weekly Heatmap</h2>
           <div style={chartContainerStyle}>
-            <HeatmapPlaceholder />
+            <HeatmapChart data={heatmapData} />
           </div>
         </div>
       </div>
@@ -146,16 +161,40 @@ export const Dashboard: React.FC = () => {
   );
 };
 
-const HeatmapPlaceholder: React.FC = () => {
+const HeatmapChart: React.FC<{ data: HeatmapCell[] }> = ({ data }) => {
   const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
-  const hours = ['9AM', '10AM', '11AM', '12PM', '1PM', '2PM', '3PM', '4PM', '5PM'];
+  const hours = Array.from({ length: 12 }, (_, i) => i + 7); // 7-18
 
-  const getRandomColor = () => {
-    const intensity = Math.random();
-    if (intensity < 0.3) return colors.successLight;
-    if (intensity < 0.6) return colors.warningLight;
+  // Build lookup for quick access
+  const lookup = new Map<string, number>();
+  let maxVal = 1;
+  data.forEach((cell) => {
+    lookup.set(`${cell.day}-${cell.hour}`, cell.value);
+    if (cell.value > maxVal) maxVal = cell.value;
+  });
+
+  const getCellColor = (day: string, hour: number) => {
+    const val = lookup.get(`${day}-${hour}`) || 0;
+    const intensity = val / maxVal;
+    if (intensity === 0) return colors.backgroundSecondary;
+    if (intensity < 0.33) return colors.successLight;
+    if (intensity < 0.66) return colors.warningLight;
     return colors.primaryLight;
   };
+
+  const formatHour = (h: number) => {
+    const suffix = h >= 12 ? 'PM' : 'AM';
+    const hr = h > 12 ? h - 12 : h;
+    return `${hr}${suffix}`;
+  };
+
+  if (data.length === 0) {
+    return (
+      <div style={{ height: '200px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: colors.textSecondary }}>
+        No heatmap data available
+      </div>
+    );
+  }
 
   return (
     <div style={{ overflowX: 'auto' }}>
@@ -170,7 +209,7 @@ const HeatmapPlaceholder: React.FC = () => {
               textAlign: 'center',
             }}
           >
-            {hour}
+            {formatHour(hour)}
           </div>
         ))}
       </div>
@@ -182,16 +221,25 @@ const HeatmapPlaceholder: React.FC = () => {
           {hours.map((hour) => (
             <div
               key={`${day}-${hour}`}
+              title={`${day} ${formatHour(hour)}: ${lookup.get(`${day}-${hour}`) || 0} bookings`}
               style={{
                 width: '40px',
                 height: '30px',
-                backgroundColor: getRandomColor(),
+                backgroundColor: getCellColor(day, hour),
                 borderRadius: borderRadius.sm,
+                cursor: 'default',
               }}
             />
           ))}
         </div>
       ))}
+      <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm, marginTop: spacing.md, paddingLeft: '50px' }}>
+        <span style={{ fontSize: typography.fontSize.xs, color: colors.textSecondary }}>Low</span>
+        {[colors.backgroundSecondary, colors.successLight, colors.warningLight, colors.primaryLight].map((c, i) => (
+          <div key={i} style={{ width: '20px', height: '12px', backgroundColor: c, borderRadius: borderRadius.sm }} />
+        ))}
+        <span style={{ fontSize: typography.fontSize.xs, color: colors.textSecondary }}>High</span>
+      </div>
     </div>
   );
 };

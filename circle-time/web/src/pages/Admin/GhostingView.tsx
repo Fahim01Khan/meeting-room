@@ -5,7 +5,11 @@ import { colors, spacing, typography, borderRadius, shadows } from '../../styles
 import type { DateRange, KPIData } from '../../types/analytics';
 import { DateRangePicker } from '../../components/DateRangePicker';
 import { KPIStat } from '../../components/KPIStat';
-import { fetchGhostingData } from '../../services/analytics';
+import { fetchGhostingData, fetchTrendData } from '../../services/analytics';
+import { apiClient } from '../../services/api';
+import {
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+} from 'recharts';
 
 export const GhostingView: React.FC = () => {
   const [dateRange, setDateRange] = useState<DateRange>({
@@ -95,6 +99,8 @@ export const GhostingView: React.FC = () => {
   // Ghosting data from API
   const [ghostingStats, setGhostingStats] = useState<KPIData[]>([]);
   const [topOffenders, setTopOffenders] = useState<{ room: string; ghostRate: number; noShows: number; wastedMins: number }[]>([]);
+  const [departments, setDepartments] = useState<{ name: string; rate: number }[]>([]);
+  const [trendData, setTrendData] = useState<{ date: string; value: number }[]>([]);
 
   useEffect(() => {
     fetchGhostingData(dateRange)
@@ -124,6 +130,16 @@ export const GhostingView: React.FC = () => {
         );
       })
       .catch(console.error);
+
+    // Fetch department breakdown
+    const qs = `startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`;
+    apiClient.get<{ name: string; rate: number; totalBookings: number; noShows: number }[]>(
+      `/analytics/ghosting/departments?${qs}`,
+    )
+      .then((res) => setDepartments(res.data))
+      .catch(console.error);
+
+    fetchTrendData('ghosting', dateRange).then(setTrendData).catch(console.error);
   }, [dateRange]);
 
   return (
@@ -145,23 +161,40 @@ export const GhostingView: React.FC = () => {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: spacing.lg }}>
         <div style={cardStyle}>
           <h2 style={sectionTitleStyle}>Ghosting Trend</h2>
-          <div style={chartPlaceholderStyle}>
-            <div style={{ textAlign: 'center' }}>
-              <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke={colors.textMuted} strokeWidth="1.5">
-                <path d="M3 3v18h18" />
-                <path d="M7 13l4-4 4 4 5-7" />
-              </svg>
-              <p style={{ marginTop: spacing.sm, fontSize: typography.fontSize.sm }}>
-                Ghosting rate over time
-              </p>
-            </div>
+          <div style={{ height: '250px' }}>
+            {trendData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={trendData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={colors.border} />
+                  <XAxis
+                    dataKey="date"
+                    tick={{ fontSize: 11, fill: colors.textSecondary }}
+                    tickFormatter={(v: string) => new Date(v).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 11, fill: colors.textSecondary }}
+                    tickFormatter={(v: number) => `${v}%`}
+                    domain={[0, 100]}
+                  />
+                  <Tooltip
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    formatter={(v: any) => [`${v}%`, 'Ghosting Rate']}
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    labelFormatter={(l: any) => new Date(l as string).toLocaleDateString()}
+                  />
+                  <Area type="monotone" dataKey="value" stroke={colors.error} fill={colors.errorLight} strokeWidth={2} />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <div style={chartPlaceholderStyle}>No trend data available</div>
+            )}
           </div>
         </div>
 
         <div style={cardStyle}>
           <h2 style={sectionTitleStyle}>By Department</h2>
           <div style={chartPlaceholderStyle}>
-            <DepartmentBreakdown />
+            <DepartmentBreakdown departments={departments} />
           </div>
         </div>
       </div>
@@ -264,14 +297,14 @@ export const GhostingView: React.FC = () => {
   );
 };
 
-const DepartmentBreakdown: React.FC = () => {
-  const departments = [
-    { name: 'Engineering', rate: 22 },
-    { name: 'Sales', rate: 28 },
-    { name: 'Marketing', rate: 15 },
-    { name: 'HR', rate: 12 },
-    { name: 'Finance', rate: 18 },
-  ];
+const DepartmentBreakdown: React.FC<{ departments: { name: string; rate: number }[] }> = ({ departments }) => {
+  if (departments.length === 0) {
+    return (
+      <div style={{ width: '100%', textAlign: 'center', color: colors.textSecondary, padding: spacing.lg }}>
+        No department data available
+      </div>
+    );
+  }
 
   return (
     <div style={{ width: '100%', padding: spacing.md }}>

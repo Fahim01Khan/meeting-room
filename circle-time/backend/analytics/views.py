@@ -177,6 +177,40 @@ def ghosting_view(request):
 
 
 # ---------------------------------------------------------------------------
+# GET /api/analytics/ghosting/departments
+# ---------------------------------------------------------------------------
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def ghosting_departments_view(request):
+    """Ghosting rate grouped by organizer department."""
+    start, end = _parse_date_range(request)
+    if start is None:
+        return Response(
+            {"success": False, "message": "Invalid date format."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    bookings_qs = _bookings_in_range(start, end).select_related("organizer")
+    # Group by department
+    dept_stats: dict[str, dict] = {}
+    for b in bookings_qs:
+        dept = b.organizer.department or "Unknown"
+        if dept not in dept_stats:
+            dept_stats[dept] = {"total": 0, "no_shows": 0}
+        dept_stats[dept]["total"] += 1
+        if b.status == "no_show":
+            dept_stats[dept]["no_shows"] += 1
+
+    result = []
+    for name, stats in sorted(dept_stats.items()):
+        rate = round((stats["no_shows"] / stats["total"] * 100) if stats["total"] > 0 else 0, 1)
+        result.append({"name": name, "rate": rate, "totalBookings": stats["total"], "noShows": stats["no_shows"]})
+
+    return Response({"success": True, "data": result})
+
+
+# ---------------------------------------------------------------------------
 # GET /api/analytics/capacity
 # ---------------------------------------------------------------------------
 

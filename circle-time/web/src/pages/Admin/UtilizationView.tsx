@@ -2,9 +2,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme';
-import type { DateRange } from '../../types/analytics';
+import type { DateRange, HeatmapCell } from '../../types/analytics';
 import { DateRangePicker } from '../../components/DateRangePicker';
-import { fetchUtilizationData } from '../../services/analytics';
+import { fetchUtilizationData, fetchTrendData, fetchHeatmapData } from '../../services/analytics';
+import { fetchRooms } from '../../services/rooms';
+import {
+  AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+} from 'recharts';
 
 export const UtilizationView: React.FC = () => {
   const [dateRange, setDateRange] = useState<DateRange>({
@@ -87,8 +91,22 @@ export const UtilizationView: React.FC = () => {
     marginBottom: spacing.lg,
   };
 
+  // Dynamic buildings list
+  const [buildings, setBuildings] = useState<string[]>([]);
+
+  useEffect(() => {
+    fetchRooms()
+      .then((rooms) => {
+        const unique = Array.from(new Set(rooms.map((r) => r.building).filter(Boolean)));
+        setBuildings(unique);
+      })
+      .catch(console.error);
+  }, []);
+
   // Utilization data from API
   const [utilizationData, setUtilizationData] = useState<{ room: string; rate: number; trend: string }[]>([]);
+  const [trendData, setTrendData] = useState<{ date: string; value: number }[]>([]);
+  const [heatmapData, setHeatmapData] = useState<HeatmapCell[]>([]);
 
   useEffect(() => {
     fetchUtilizationData(dateRange)
@@ -102,6 +120,8 @@ export const UtilizationView: React.FC = () => {
         ),
       )
       .catch(console.error);
+    fetchTrendData('utilization', dateRange).then(setTrendData).catch(console.error);
+    fetchHeatmapData(dateRange, 'utilization').then(setHeatmapData).catch(console.error);
   }, [dateRange, selectedBuilding]);
 
   return (
@@ -118,9 +138,9 @@ export const UtilizationView: React.FC = () => {
             onChange={(e) => setSelectedBuilding(e.target.value)}
           >
             <option value="all">All Buildings</option>
-            <option value="main">Main Building</option>
-            <option value="executive">Executive Wing</option>
-            <option value="annex">Annex</option>
+            {buildings.map((b) => (
+              <option key={b} value={b}>{b}</option>
+            ))}
           </select>
           <DateRangePicker value={dateRange} onChange={setDateRange} />
         </div>
@@ -128,49 +148,93 @@ export const UtilizationView: React.FC = () => {
 
       <div style={cardStyle}>
         <h2 style={sectionTitleStyle}>Utilization Over Time</h2>
-        <div style={chartPlaceholderStyle}>
-          <div style={{ textAlign: 'center' }}>
-            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke={colors.textMuted} strokeWidth="1.5">
-              <path d="M3 3v18h18" />
-              <path d="M7 16l4-4 4 4 5-5" />
-            </svg>
-            <p style={{ marginTop: spacing.sm, fontSize: typography.fontSize.sm }}>
-              Line Chart: Daily utilization trends
-            </p>
-          </div>
+        <div style={{ height: '250px' }}>
+          {trendData.length > 0 ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={trendData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke={colors.border} />
+                <XAxis
+                  dataKey="date"
+                  tick={{ fontSize: 11, fill: colors.textSecondary }}
+                  tickFormatter={(v: string) => new Date(v).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                />
+                <YAxis
+                  tick={{ fontSize: 11, fill: colors.textSecondary }}
+                  tickFormatter={(v: number) => `${v}%`}
+                  domain={[0, 100]}
+                />
+                <Tooltip
+                  formatter={(v: number) => [`${v}%`, 'Utilization']}
+                  labelFormatter={(l: string) => new Date(l).toLocaleDateString()}
+                />
+                <Area type="monotone" dataKey="value" stroke={colors.primary} fill={colors.primaryLight} strokeWidth={2} />
+              </AreaChart>
+            </ResponsiveContainer>
+          ) : (
+            <div style={chartPlaceholderStyle}>No trend data available</div>
+          )}
         </div>
       </div>
 
       <div style={gridStyle}>
         <div style={cardStyle}>
           <h2 style={sectionTitleStyle}>By Time of Day</h2>
-          <div style={chartPlaceholderStyle}>
-            <div style={{ textAlign: 'center' }}>
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke={colors.textMuted} strokeWidth="1.5">
-                <path d="M12 2v20M2 12h20" />
-                <circle cx="12" cy="12" r="10" />
-              </svg>
-              <p style={{ marginTop: spacing.sm, fontSize: typography.fontSize.sm }}>
-                Peak hours visualization
-              </p>
-            </div>
+          <div style={{ height: '250px' }}>
+            {heatmapData.length > 0 ? (() => {
+              // Aggregate heatmap by hour
+              const hourMap = new Map<number, number>();
+              heatmapData.forEach((cell) => {
+                hourMap.set(cell.hour, (hourMap.get(cell.hour) || 0) + cell.value);
+              });
+              const byHour = Array.from(hourMap.entries())
+                .sort((a, b) => a[0] - b[0])
+                .map(([h, v]) => ({
+                  hour: h > 12 ? `${h - 12}PM` : h === 12 ? '12PM' : `${h}AM`,
+                  bookings: v,
+                }));
+              return (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={byHour} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={colors.border} />
+                    <XAxis dataKey="hour" tick={{ fontSize: 11, fill: colors.textSecondary }} />
+                    <YAxis tick={{ fontSize: 11, fill: colors.textSecondary }} />
+                    <Tooltip formatter={(v: number) => [v, 'Bookings']} />
+                    <Bar dataKey="bookings" fill={colors.primary} radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              );
+            })() : (
+              <div style={chartPlaceholderStyle}>No heatmap data available</div>
+            )}
           </div>
         </div>
 
         <div style={cardStyle}>
           <h2 style={sectionTitleStyle}>By Day of Week</h2>
-          <div style={chartPlaceholderStyle}>
-            <div style={{ textAlign: 'center' }}>
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke={colors.textMuted} strokeWidth="1.5">
-                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                <line x1="16" y1="2" x2="16" y2="6" />
-                <line x1="8" y1="2" x2="8" y2="6" />
-                <line x1="3" y1="10" x2="21" y2="10" />
-              </svg>
-              <p style={{ marginTop: spacing.sm, fontSize: typography.fontSize.sm }}>
-                Weekly patterns
-              </p>
-            </div>
+          <div style={{ height: '250px' }}>
+            {heatmapData.length > 0 ? (() => {
+              const dayOrder = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+              const dayMap = new Map<string, number>();
+              heatmapData.forEach((cell) => {
+                dayMap.set(cell.day, (dayMap.get(cell.day) || 0) + cell.value);
+              });
+              const byDay = dayOrder
+                .filter((d) => dayMap.has(d))
+                .map((d) => ({ day: d, bookings: dayMap.get(d) || 0 }));
+              return (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={byDay} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={colors.border} />
+                    <XAxis dataKey="day" tick={{ fontSize: 11, fill: colors.textSecondary }} />
+                    <YAxis tick={{ fontSize: 11, fill: colors.textSecondary }} />
+                    <Tooltip formatter={(v: number) => [v, 'Bookings']} />
+                    <Bar dataKey="bookings" fill={colors.success} radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              );
+            })() : (
+              <div style={chartPlaceholderStyle}>No heatmap data available</div>
+            )}
           </div>
         </div>
       </div>

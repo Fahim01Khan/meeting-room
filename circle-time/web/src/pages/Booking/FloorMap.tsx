@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme';
 import { fetchRooms } from '../../services/rooms';
+import { apiClient } from '../../services/api';
 import type { Room } from '../../types/room';
 
 interface FloorMapProps {
@@ -24,6 +25,9 @@ interface RoomPosition {
 
 export const FloorMap: React.FC<FloorMapProps> = ({ onRoomSelect }) => {
   const [selectedFloor, setSelectedFloor] = useState(1);
+  const [selectedBuilding, setSelectedBuilding] = useState<string>("");
+  const [availableBuildings, setAvailableBuildings] = useState<string[]>([]);
+  const [availableFloors, setAvailableFloors] = useState<number[]>([]);
   const [hoveredRoom, setHoveredRoom] = useState<string | null>(null);
   const [allRooms, setAllRooms] = useState<Room[]>([]);
 
@@ -111,13 +115,32 @@ export const FloorMap: React.FC<FloorMapProps> = ({ onRoomSelect }) => {
   // Fetch all rooms once
   useEffect(() => {
     fetchRooms()
-      .then((data) => setAllRooms(data))
+      .then((data) => {
+        setAllRooms(data);
+        // Derive unique buildings
+        const buildings = Array.from(new Set(data.map((r) => r.building))).sort();
+        setAvailableBuildings(buildings);
+        if (buildings.length > 0 && !selectedBuilding) {
+          setSelectedBuilding(buildings[0]);
+        }
+      })
       .catch(console.error);
   }, []);
 
-  // Filter + position rooms when floor changes or data loads
+  // Update available floors when building changes
   useEffect(() => {
-    const floorRooms = allRooms.filter((r) => r.floor === selectedFloor);
+    if (!selectedBuilding) return;
+    const buildingRooms = allRooms.filter((r) => r.building === selectedBuilding);
+    const floors = Array.from(new Set(buildingRooms.map((r) => r.floor))).sort((a, b) => a - b);
+    setAvailableFloors(floors);
+    if (floors.length > 0 && !floors.includes(selectedFloor)) {
+      setSelectedFloor(floors[0]);
+    }
+  }, [selectedBuilding, allRooms]);
+
+  // Filter + position rooms when floor or building changes or data loads
+  useEffect(() => {
+    const floorRooms = allRooms.filter((r) => r.floor === selectedFloor && r.building === selectedBuilding);
     const positions: RoomPosition[] = floorRooms.map((r, i) => {
       const col = i % 3;
       const row = Math.floor(i / 3);
@@ -133,7 +156,7 @@ export const FloorMap: React.FC<FloorMapProps> = ({ onRoomSelect }) => {
       };
     });
     setRooms(positions);
-  }, [allRooms, selectedFloor]);
+  }, [allRooms, selectedFloor, selectedBuilding]);
 
   const getStatusColor = (status: RoomPosition['status']) => {
     switch (status) {
@@ -161,19 +184,23 @@ export const FloorMap: React.FC<FloorMapProps> = ({ onRoomSelect }) => {
       <div style={headerStyle}>
         <h1 style={titleStyle}>Floor Map</h1>
         <div style={controlsStyle}>
-          <select style={selectStyle}>
-            <option value="main">Main Building</option>
-            <option value="executive">Executive Wing</option>
-            <option value="annex">Annex</option>
+          <select
+            style={selectStyle}
+            value={selectedBuilding}
+            onChange={(e) => setSelectedBuilding(e.target.value)}
+          >
+            {availableBuildings.map((b) => (
+              <option key={b} value={b}>{b}</option>
+            ))}
           </select>
           <select
             style={selectStyle}
             value={selectedFloor}
             onChange={(e) => setSelectedFloor(parseInt(e.target.value))}
           >
-            <option value="1">Floor 1</option>
-            <option value="2">Floor 2</option>
-            <option value="3">Floor 3</option>
+            {availableFloors.map((f) => (
+              <option key={f} value={f}>Floor {f}</option>
+            ))}
           </select>
         </div>
       </div>
@@ -305,7 +332,7 @@ export const FloorMap: React.FC<FloorMapProps> = ({ onRoomSelect }) => {
           textAlign: 'center',
         }}
       >
-        Floor {selectedFloor} • Main Building • Last updated: Just now
+        Floor {selectedFloor} · {selectedBuilding || 'Loading...'} · {rooms.length} {rooms.length === 1 ? 'room' : 'rooms'}
       </div>
     </div>
   );

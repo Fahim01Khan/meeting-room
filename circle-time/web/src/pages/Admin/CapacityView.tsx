@@ -6,6 +6,10 @@ import type { DateRange, KPIData } from '../../types/analytics';
 import { DateRangePicker } from '../../components/DateRangePicker';
 import { KPIStat } from '../../components/KPIStat';
 import { fetchCapacityData } from '../../services/analytics';
+import {
+  PieChart, Pie, Cell, ScatterChart, Scatter, XAxis, YAxis, CartesianGrid,
+  Tooltip, ResponsiveContainer, Legend,
+} from 'recharts';
 
 export const CapacityView: React.FC = () => {
   const [dateRange, setDateRange] = useState<DateRange>({
@@ -127,35 +131,76 @@ export const CapacityView: React.FC = () => {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: spacing.lg }}>
         <div style={cardStyle}>
           <h2 style={sectionTitleStyle}>Capacity Distribution</h2>
-          <div style={chartPlaceholderStyle}>
-            <div style={{ textAlign: 'center' }}>
-              <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke={colors.textMuted} strokeWidth="1.5">
-                <circle cx="12" cy="12" r="10" />
-                <path d="M12 2a10 10 0 0 1 10 10" />
-                <path d="M12 2a10 10 0 0 0-7 17" />
-              </svg>
-              <p style={{ marginTop: spacing.sm, fontSize: typography.fontSize.sm }}>
-                Pie chart: Booking size distribution
-              </p>
-            </div>
+          <div style={{ height: '250px' }}>
+            {roomCapacityData.length > 0 ? (() => {
+              const oversized = roomCapacityData.filter((r) => r.avgAttendees < r.capacity * 0.5).length;
+              const undersized = roomCapacityData.filter((r) => r.avgAttendees > r.capacity).length;
+              const rightSized = roomCapacityData.length - oversized - undersized;
+              const pieData = [
+                { name: 'Right-Sized', value: rightSized, color: colors.success },
+                { name: 'Oversized', value: oversized, color: colors.warning },
+                { name: 'Undersized', value: undersized, color: colors.error },
+              ].filter((d) => d.value > 0);
+              return (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={({ name, percent }: { name: string; percent: number }) => `${name} ${Math.round(percent * 100)}%`}>
+                      {pieData.map((entry, i) => (
+                        <Cell key={i} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              );
+            })() : (
+              <div style={chartPlaceholderStyle}>No capacity data available</div>
+            )}
           </div>
         </div>
 
         <div style={cardStyle}>
           <h2 style={sectionTitleStyle}>Room Size vs Actual Usage</h2>
-          <div style={chartPlaceholderStyle}>
-            <div style={{ textAlign: 'center' }}>
-              <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke={colors.textMuted} strokeWidth="1.5">
-                <path d="M3 3v18h18" />
-                <circle cx="9" cy="13" r="2" />
-                <circle cx="14" cy="8" r="2" />
-                <circle cx="18" cy="11" r="2" />
-                <circle cx="7" cy="7" r="2" />
-              </svg>
-              <p style={{ marginTop: spacing.sm, fontSize: typography.fontSize.sm }}>
-                Scatter plot: Capacity vs attendees
-              </p>
-            </div>
+          <div style={{ height: '250px' }}>
+            {roomCapacityData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <ScatterChart margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={colors.border} />
+                  <XAxis
+                    dataKey="capacity"
+                    name="Capacity"
+                    type="number"
+                    tick={{ fontSize: 11, fill: colors.textSecondary }}
+                    label={{ value: 'Room Capacity', position: 'insideBottom', offset: -5, fontSize: 11, fill: colors.textSecondary }}
+                  />
+                  <YAxis
+                    dataKey="avgAttendees"
+                    name="Avg Attendees"
+                    type="number"
+                    tick={{ fontSize: 11, fill: colors.textSecondary }}
+                    label={{ value: 'Avg Attendees', angle: -90, position: 'insideLeft', fontSize: 11, fill: colors.textSecondary }}
+                  />
+                  <Tooltip
+                    cursor={{ strokeDasharray: '3 3' }}
+                    content={({ payload }) => {
+                      if (!payload?.length) return null;
+                      const d = payload[0].payload as { room: string; capacity: number; avgAttendees: number };
+                      return (
+                        <div style={{ backgroundColor: colors.background, border: `1px solid ${colors.border}`, borderRadius: borderRadius.sm, padding: spacing.sm, fontSize: typography.fontSize.xs }}>
+                          <p style={{ fontWeight: typography.fontWeight.semibold }}>{d.room}</p>
+                          <p>Capacity: {d.capacity}</p>
+                          <p>Avg Attendees: {d.avgAttendees}</p>
+                        </div>
+                      );
+                    }}
+                  />
+                  <Scatter data={roomCapacityData} fill={colors.primary} />
+                </ScatterChart>
+              </ResponsiveContainer>
+            ) : (
+              <div style={chartPlaceholderStyle}>No capacity data available</div>
+            )}
           </div>
         </div>
       </div>
@@ -249,51 +294,63 @@ export const CapacityView: React.FC = () => {
       <div style={cardStyle}>
         <h2 style={sectionTitleStyle}>Optimization Insights</h2>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: spacing.lg }}>
-          <div
-            style={{
-              padding: spacing.lg,
-              backgroundColor: colors.warningLight,
-              borderRadius: borderRadius.md,
-              borderLeft: `4px solid ${colors.warning}`,
-            }}
-          >
-            <h3 style={{ fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.semibold, color: colors.text, marginBottom: spacing.sm }}>
-              Oversized Room Usage
-            </h3>
-            <p style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>
-              Board Room is frequently booked for small meetings (2-4 people). Consider promoting smaller rooms for these meetings.
-            </p>
-          </div>
-          <div
-            style={{
-              padding: spacing.lg,
-              backgroundColor: colors.successLight,
-              borderRadius: borderRadius.md,
-              borderLeft: `4px solid ${colors.success}`,
-            }}
-          >
-            <h3 style={{ fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.semibold, color: colors.text, marginBottom: spacing.sm }}>
-              Well-Utilized Rooms
-            </h3>
-            <p style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>
-              Huddle rooms show optimal capacity usage. Consider adding more huddle spaces to meet demand.
-            </p>
-          </div>
-          <div
-            style={{
-              padding: spacing.lg,
-              backgroundColor: colors.primaryLight,
-              borderRadius: borderRadius.md,
-              borderLeft: `4px solid ${colors.primary}`,
-            }}
-          >
-            <h3 style={{ fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.semibold, color: colors.text, marginBottom: spacing.sm }}>
-              Recommended Action
-            </h3>
-            <p style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>
-              Implement room size recommendations during booking based on expected attendee count.
-            </p>
-          </div>
+          {(() => {
+            const insights: { title: string; message: string; bg: string; border: string }[] = [];
+
+            if (roomCapacityData.length > 0) {
+              // Most oversized room (lowest capacity utilization)
+              const sorted = [...roomCapacityData].sort((a, b) => a.utilization - b.utilization);
+              const worst = sorted[0];
+              if (worst.utilization < 50) {
+                insights.push({
+                  title: 'Oversized Room Usage',
+                  message: `${worst.room} averages ${worst.avgAttendees} attendees for a capacity of ${worst.capacity} (${worst.utilization}% utilization). Consider promoting smaller rooms for these meetings.`,
+                  bg: colors.warningLight,
+                  border: colors.warning,
+                });
+              }
+
+              // Best utilized room
+              const best = sorted[sorted.length - 1];
+              if (best.utilization >= 50) {
+                insights.push({
+                  title: 'Well-Utilized Rooms',
+                  message: `${best.room} shows strong capacity usage at ${best.utilization}% with ${best.avgAttendees} avg attendees. Consider adding similar-sized rooms to meet demand.`,
+                  bg: colors.successLight,
+                  border: colors.success,
+                });
+              }
+            }
+
+            // Always show recommended action
+            insights.push({
+              title: 'Recommended Action',
+              message: roomCapacityData.length > 0
+                ? `With ${roomCapacityData.length} rooms tracked, implement room size recommendations during booking based on expected attendee count to improve overall capacity utilization.`
+                : 'Start tracking room usage to generate optimization insights.',
+              bg: colors.primaryLight,
+              border: colors.primary,
+            });
+
+            return insights.map((insight, idx) => (
+              <div
+                key={idx}
+                style={{
+                  padding: spacing.lg,
+                  backgroundColor: insight.bg,
+                  borderRadius: borderRadius.md,
+                  borderLeft: `4px solid ${insight.border}`,
+                }}
+              >
+                <h3 style={{ fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.semibold, color: colors.text, marginBottom: spacing.sm }}>
+                  {insight.title}
+                </h3>
+                <p style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>
+                  {insight.message}
+                </p>
+              </div>
+            ));
+          })()}
         </div>
       </div>
     </div>
