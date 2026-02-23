@@ -330,6 +330,62 @@ Content-Type: application/json
 
 
 ### =========================================================================
+### Ad-hoc Booking (Day 9 — no auth required)
+### =========================================================================
+
+### TEST 1 — Missing body (expect 400)
+POST {{baseUrl}}/rooms/{{roomId}}/book-adhoc HTTP/1.1
+Content-Type: application/json
+
+{}
+
+### TEST 2 — Invalid duration (expect 400)
+POST {{baseUrl}}/rooms/{{roomId}}/book-adhoc HTTP/1.1
+Content-Type: application/json
+
+{
+  "durationMinutes": 45
+}
+
+### TEST 3 — Happy path: book 30 minutes (expect 201)
+# @name adHocBooking
+POST {{baseUrl}}/rooms/{{roomId}}/book-adhoc HTTP/1.1
+Content-Type: application/json
+
+{
+  "durationMinutes": 30
+}
+
+###
+@adHocBookingId = {{adHocBooking.response.body.data.id}}
+
+### TEST 4 — Conflict check: book again immediately (expect 409)
+POST {{baseUrl}}/rooms/{{roomId}}/book-adhoc HTTP/1.1
+Content-Type: application/json
+
+{
+  "durationMinutes": 30
+}
+
+### TEST 5 — Confirm room is now occupied (expect "status": "occupied")
+GET {{baseUrl}}/rooms/{{roomId}}/state HTTP/1.1
+
+### TEST 6 — Check in to the ad-hoc booking (expect 200)
+POST {{baseUrl}}/meetings/{{adHocBookingId}}/checkin HTTP/1.1
+Content-Type: application/json
+
+### TEST 7 — Confirm room shows checkedIn: true
+GET {{baseUrl}}/rooms/{{roomId}}/state HTTP/1.1
+
+### TEST 8 — End the ad-hoc booking early (expect 200)
+POST {{baseUrl}}/meetings/{{adHocBookingId}}/end HTTP/1.1
+Content-Type: application/json
+
+### TEST 9 — Confirm room is available again (expect "status": "available")
+GET {{baseUrl}}/rooms/{{roomId}}/state HTTP/1.1
+
+
+### =========================================================================
 ### Analytics
 ### =========================================================================
 

@@ -321,3 +321,114 @@ def get_floor_plan(request, building_id, floor_num):
         {"success": True, "data": serializer.data},
         status=status.HTTP_200_OK,
     )
+
+
+# ---------------------------------------------------------------------------
+# POST /api/rooms/<room_id>/book-adhoc  (kiosk — no auth required)
+# ---------------------------------------------------------------------------
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def book_adhoc(request, room_id):
+    """
+    POST /api/rooms/<room_id>/book-adhoc
+    Create an ad-hoc booking from the tablet kiosk. No authentication required.
+
+    Request body:
+        { "durationMinutes": 30 }   # valid values: 30, 60, 90, 120
+
+    Returns the new booking in Meeting shape so the mobile app can use it
+    directly without a follow-up state fetch.
+    """
+    from datetime import timedelta
+    from bookings.models import Booking
+    from bookings.constants import BookingStatus
+    from bookings.utils import check_booking_conflicts
+    from accounts.models import User as AuthUser
+
+    # Validate durationMinutes
+    duration_minutes = request.data.get("durationMinutes")
+    valid_durations = [30, 60, 90, 120]
+    try:
+        duration_minutes = int(duration_minutes)
+    except (TypeError, ValueError):
+        return Response(
+            {"success": False, "message": "durationMinutes is required and must be an integer."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if duration_minutes not in valid_durations:
+        return Response(
+            {
+                "success": False,
+                "message": f"durationMinutes must be one of {valid_durations}.",
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    # Validate room exists
+    try:
+        room = Room.objects.get(id=room_id)
+    except Room.DoesNotExist:
+        return Response(
+            {"success": False, "message": "Room not found"},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    # Reject maintenance rooms
+    if room.status == "maintenance":
+        return Response(
+            {"success": False, "message": "Room is under maintenance and cannot be booked."},
+            status=status.HTTP_409_CONFLICT,
+        )
+
+    # Calculate booking window
+    start_time = timezone.now()
+    end_time = start_time + timedelta(minutes=duration_minutes)
+
+    # Conflict check
+    if check_booking_conflicts(room_id, start_time, end_time):
+        return Response(
+            {"success": False, "message": "Room is already booked for the requested time slot."},
+            status=status.HTTP_409_CONFLICT,
+        )
+
+    # Get or create the system kiosk user
+    kiosk_user, _ = AuthUser.objects.get_or_create(
+        email="kiosk@circletime.io",
+        defaults={
+            "name": "Kiosk User",
+        },
+    )
+
+    # Create booking
+    booking = Booking.objects.create(
+        room=room,
+        title="Ad-hoc Booking",
+        description="",
+        organizer=kiosk_user,
+        start_time=start_time,
+        end_time=end_time,
+        status=BookingStatus.CONFIRMED.value,
+    )
+
+    # Return in Meeting shape (matches mobile RoomState.Meeting interface)
+    organizer_name = getattr(kiosk_user, 'name', None) or kiosk_user.email
+
+    return Response(
+        {
+            "success": True,
+            "data": {
+                "id": str(booking.id),
+                "title": booking.title,
+                "organizer": organizer_name,
+                "organizerEmail": kiosk_user.email,
+                "startTime": booking.start_time.isoformat(),
+                "endTime": booking.end_time.isoformat(),
+                "attendeeCount": 0,
+                "checkedIn": False,
+                "checkedInAt": None,
+            },
+        },
+        status=status.HTTP_201_CREATED,
+    )
