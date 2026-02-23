@@ -73,6 +73,211 @@ def list_rooms(request):
     )
 
 
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def create_room(request):
+    """
+    POST /api/rooms
+    Create a new room. Admin only.
+    Body: { name, building, floor, capacity, amenities?, status? }
+    """
+    if request.user.role != "admin":
+        return Response(
+            {"success": False, "message": "Admin access required"},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
+    name = request.data.get("name", "").strip()
+    building = request.data.get("building", "").strip()
+    floor = request.data.get("floor")
+    capacity = request.data.get("capacity")
+
+    errors = {}
+    if not name:
+        errors["name"] = "This field is required."
+    if not building:
+        errors["building"] = "This field is required."
+    if floor is None:
+        errors["floor"] = "This field is required."
+    if capacity is None:
+        errors["capacity"] = "This field is required."
+
+    try:
+        floor = int(floor)
+    except (TypeError, ValueError):
+        errors["floor"] = "Must be an integer."
+    try:
+        capacity = int(capacity)
+    except (TypeError, ValueError):
+        errors["capacity"] = "Must be an integer."
+
+    if errors:
+        return Response(
+            {"success": False, "errors": errors},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    amenities = request.data.get("amenities", [])
+    if not isinstance(amenities, list):
+        amenities = []
+
+    room_status = request.data.get("status", "available")
+    valid_statuses = [c[0] for c in Room.STATUS_CHOICES]
+    if room_status not in valid_statuses:
+        room_status = "available"
+
+    room = Room.objects.create(
+        name=name,
+        building=building,
+        floor=floor,
+        capacity=capacity,
+        amenities=amenities,
+        status=room_status,
+    )
+
+    serializer = RoomSerializer(room)
+    return Response(
+        {"success": True, "data": serializer.data},
+        status=status.HTTP_201_CREATED,
+    )
+
+
+@api_view(["PUT"])
+@permission_classes([IsAuthenticated])
+def update_room(request, room_id):
+    """
+    PUT /api/rooms/<room_id>
+    Partially update a room. Admin only.
+    """
+    if request.user.role != "admin":
+        return Response(
+            {"success": False, "message": "Admin access required"},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
+    try:
+        room = Room.objects.get(id=room_id)
+    except Room.DoesNotExist:
+        return Response(
+            {"success": False, "message": "Room not found"},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+    except ValueError:
+        return Response(
+            {"success": False, "message": "Invalid room ID format"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    errors = {}
+
+    if "name" in request.data:
+        name = str(request.data["name"]).strip()
+        if not name:
+            errors["name"] = "This field cannot be blank."
+        else:
+            room.name = name
+
+    if "building" in request.data:
+        building = str(request.data["building"]).strip()
+        if not building:
+            errors["building"] = "This field cannot be blank."
+        else:
+            room.building = building
+
+    if "floor" in request.data:
+        try:
+            room.floor = int(request.data["floor"])
+        except (TypeError, ValueError):
+            errors["floor"] = "Must be an integer."
+
+    if "capacity" in request.data:
+        try:
+            room.capacity = int(request.data["capacity"])
+        except (TypeError, ValueError):
+            errors["capacity"] = "Must be an integer."
+
+    if "amenities" in request.data:
+        amenities = request.data["amenities"]
+        room.amenities = amenities if isinstance(amenities, list) else []
+
+    if "status" in request.data:
+        new_status = request.data["status"]
+        valid_statuses = [c[0] for c in Room.STATUS_CHOICES]
+        if new_status not in valid_statuses:
+            errors["status"] = f"Must be one of: {', '.join(valid_statuses)}."
+        else:
+            room.status = new_status
+
+    if errors:
+        return Response(
+            {"success": False, "errors": errors},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    room.save()
+    serializer = RoomSerializer(room)
+    return Response(
+        {"success": True, "data": serializer.data},
+        status=status.HTTP_200_OK,
+    )
+
+
+@api_view(["DELETE"])
+@permission_classes([IsAuthenticated])
+def delete_room(request, room_id):
+    """
+    DELETE /api/rooms/<room_id>
+    Delete a room. Admin only.
+    Blocked if room has active or future bookings (status not in cancelled/completed).
+    """
+    if request.user.role != "admin":
+        return Response(
+            {"success": False, "message": "Admin access required"},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
+    try:
+        room = Room.objects.get(id=room_id)
+    except Room.DoesNotExist:
+        return Response(
+            {"success": False, "message": "Room not found"},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+    except ValueError:
+        return Response(
+            {"success": False, "message": "Invalid room ID format"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    from bookings.models import Booking
+
+    now = timezone.now()
+    blocking_count = Booking.objects.filter(
+        room=room,
+        end_time__gte=now,
+    ).exclude(
+        status__in=["cancelled", "completed"]
+    ).count()
+
+    if blocking_count > 0:
+        return Response(
+            {
+                "success": False,
+                "message": (
+                    f"Cannot delete room: {blocking_count} active or future "
+                    f"booking{'s' if blocking_count != 1 else ''} must be cancelled first."
+                ),
+            },
+            status=status.HTTP_409_CONFLICT,
+        )
+
+    room.delete()
+    return Response(
+        {"success": True},
+        status=status.HTTP_200_OK,
+    )
+
+
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def get_room(request, room_id):

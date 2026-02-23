@@ -60,7 +60,7 @@ psql -U postgres -d circletime_dev -c "CREATE EXTENSION IF NOT EXISTS uuid-ossp;
 
 ---
 
-## 2) Backend — venv, deps, migrate, seed, run
+## 2) Backend — venv, deps, migrate, run
 
 ```bash
 cd circle-time/backend
@@ -85,9 +85,7 @@ python manage.py migrate
 # Create admin superuser
 python manage.py createsuperuser --email admin@example.com
 # When prompted, use password: pass1234
-
-# Seed demo data (users, rooms, buildings, ~2 weeks of bookings)
-python manage.py seed
+# Rooms and users are created through the web UI after first login
 
 # Start the server
 python manage.py runserver 0.0.0.0:8000
