@@ -11,6 +11,7 @@ import { Dashboard } from '../pages/Admin/Dashboard';
 import { UtilizationView } from '../pages/Admin/UtilizationView';
 import { GhostingView } from '../pages/Admin/GhostingView';
 import { CapacityView } from '../pages/Admin/CapacityView';
+import { DevicesPage } from '../pages/Admin/DevicesPage';
 import type { Room } from '../types/room';
 
 export const Router: React.FC = () => {
@@ -40,6 +41,7 @@ export const Router: React.FC = () => {
           <Route path="admin/utilization" element={<UtilizationView />} />
           <Route path="admin/ghosting" element={<GhostingView />} />
           <Route path="admin/capacity" element={<CapacityView />} />
+          <Route path="admin/devices" element={<DevicesPage />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />
