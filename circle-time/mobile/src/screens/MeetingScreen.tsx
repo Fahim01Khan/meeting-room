@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, useWindowDimensions } from 'react-native';
 import { colors, typography, spacing, borderRadius, shadows } from '../styles/theme';
 import { StatusIndicator } from '../components/StatusIndicator';
 import { PrimaryButton } from '../components/PrimaryButton';
@@ -11,6 +11,8 @@ export const MeetingScreen: React.FC = () => {
   const { roomState, setCurrentScreen } = useRoomState();
   const [currentTime, setCurrentTime] = useState(new Date());
   const [timeRemaining, setTimeRemaining] = useState<string>('');
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
 
   // Update time every second for countdown
   useEffect(() => {
@@ -79,6 +81,107 @@ export const MeetingScreen: React.FC = () => {
   const progress = getProgress();
   const isEnding = progress > 0.9;
 
+  // ─── Landscape two-column layout ────────────────────────────────────────────
+  if (isLandscape) {
+    return (
+      <View style={[styles.container, { backgroundColor: isEnding ? colors.warningLight : colors.errorLight }]}>
+        {/* Full-width header */}
+        <View style={styles.header}>
+          <StatusIndicator status="occupied" size="large" />
+          <Text style={styles.roomName}>{roomState.room.name}</Text>
+        </View>
+
+        {/* Two-column body */}
+        <View style={styles.landscapeBody}>
+          {/* Left column: meeting info + progress */}
+          <View style={styles.landscapeLeft}>
+            <Text style={styles.meetingTitleLandscape}>{meeting.title}</Text>
+            <Text style={styles.meetingOrganizerLandscape}>
+              Organized by {meeting.organizer}
+            </Text>
+            <Text style={styles.meetingTimeLandscape}>
+              {formatTime(meeting.startTime)} - {formatTime(meeting.endTime)}
+            </Text>
+
+            <View style={styles.progressContainerLandscape}>
+              <View style={styles.progressBar}>
+                <View
+                  style={[
+                    styles.progressFill,
+                    {
+                      width: `${progress * 100}%`,
+                      backgroundColor: isEnding ? colors.warning : colors.error,
+                    },
+                  ]}
+                />
+              </View>
+              <Text style={[styles.timeRemainingLandscape, { color: isEnding ? colors.warning : colors.error }]}>
+                {timeRemaining}
+              </Text>
+            </View>
+          </View>
+
+          {/* Right column: attendees + badges + action */}
+          <View style={styles.landscapeRight}>
+            <View>
+              <View style={styles.attendeesCardLandscape}>
+                <Text style={styles.attendeesLabel}>
+                  {meeting.attendeeCount > 0 ? 'ATTENDEES' : 'BOOKING TYPE'}
+                </Text>
+                <View style={styles.attendeesRow}>
+                  <View style={styles.attendeesIcon}>
+                    <Text style={styles.attendeesIconText}>
+                      {meeting.attendeeCount > 0 ? meeting.attendeeCount : '⚡'}
+                    </Text>
+                  </View>
+                  <Text style={styles.attendeesText}>
+                    {meeting.attendeeCount > 0
+                      ? `${meeting.attendeeCount} ${meeting.attendeeCount === 1 ? 'person' : 'people'} expected`
+                      : 'Walk-in booking'}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Check-in Status */}
+              {meeting.checkedIn && (
+                <View style={styles.checkedInBadgeLandscape}>
+                  <Text style={styles.checkedInText}>✓ Checked In</Text>
+                  {meeting.checkedInAt && (
+                    <Text style={styles.checkedInTime}>
+                      at {formatTime(meeting.checkedInAt)}
+                    </Text>
+                  )}
+                </View>
+              )}
+
+              {/* Next Meeting Warning */}
+              {roomState.nextMeeting && (
+                <View style={styles.nextMeetingWarningLandscape}>
+                  <Text style={styles.nextMeetingText}>
+                    Next: {roomState.nextMeeting.title} at{' '}
+                    {formatTime(roomState.nextMeeting.startTime)}
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            {/* Action pinned at bottom of right column */}
+            <View style={styles.actionsLandscape}>
+              <PrimaryButton
+                title="End Meeting Early"
+                onPress={() => setCurrentScreen('endEarly')}
+                variant="outline"
+                size="large"
+                fullWidth
+              />
+            </View>
+          </View>
+        </View>
+      </View>
+    );
+  }
+
+  // ─── Portrait fallback ───────────────────────────────────────────────────────
   return (
     <View style={[styles.container, { backgroundColor: isEnding ? colors.warningLight : colors.errorLight }]}>
       {/* Header */}
@@ -120,13 +223,19 @@ export const MeetingScreen: React.FC = () => {
 
       {/* Attendees */}
       <View style={styles.attendeesCard}>
-        <Text style={styles.attendeesLabel}>ATTENDEES</Text>
+        <Text style={styles.attendeesLabel}>
+          {meeting.attendeeCount > 0 ? 'ATTENDEES' : 'BOOKING TYPE'}
+        </Text>
         <View style={styles.attendeesRow}>
           <View style={styles.attendeesIcon}>
-            <Text style={styles.attendeesIconText}>{meeting.attendeeCount}</Text>
+            <Text style={styles.attendeesIconText}>
+              {meeting.attendeeCount > 0 ? meeting.attendeeCount : '⚡'}
+            </Text>
           </View>
           <Text style={styles.attendeesText}>
-            {meeting.attendeeCount} {meeting.attendeeCount === 1 ? 'person' : 'people'} expected
+            {meeting.attendeeCount > 0
+              ? `${meeting.attendeeCount} ${meeting.attendeeCount === 1 ? 'person' : 'people'} expected`
+              : 'Walk-in booking'}
           </Text>
         </View>
       </View>
@@ -181,16 +290,86 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: spacing.lg,
+    paddingVertical: spacing.sm,
+    marginBottom: spacing.xs,
   },
   roomName: {
     fontSize: typography.fontSize.xl,
     fontWeight: typography.fontWeight.semibold,
     color: colors.text,
   },
+
+  // ── Landscape layout ──────────────────────────────────────────────────────────
+  landscapeBody: {
+    flex: 1,
+    flexDirection: 'row',
+    gap: spacing.xl,
+  },
+  landscapeLeft: {
+    flex: 45,
+    justifyContent: 'center',
+  },
+  landscapeRight: {
+    flex: 55,
+    justifyContent: 'space-between',
+  },
+  meetingTitleLandscape: {
+    fontSize: typography.fontSize.xxl,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.text,
+    marginBottom: spacing.sm,
+  },
+  meetingOrganizerLandscape: {
+    fontSize: typography.fontSize.lg,
+    color: colors.textSecondary,
+    marginBottom: spacing.xs,
+  },
+  meetingTimeLandscape: {
+    fontSize: typography.fontSize.xl,
+    fontWeight: typography.fontWeight.medium,
+    color: colors.text,
+    marginBottom: spacing.md,
+  },
+  progressContainerLandscape: {
+    alignItems: 'center',
+    marginTop: spacing.sm,
+  },
+  timeRemainingLandscape: {
+    marginTop: spacing.sm,
+    fontSize: typography.fontSize.xl,
+    fontWeight: typography.fontWeight.bold,
+  },
+  attendeesCardLandscape: {
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    ...shadows.sm,
+  },
+  checkedInBadgeLandscape: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.successLight,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.lg,
+    marginTop: spacing.sm,
+  },
+  nextMeetingWarningLandscape: {
+    backgroundColor: colors.warningLight,
+    padding: spacing.sm,
+    borderRadius: borderRadius.md,
+    alignItems: 'center',
+    marginTop: spacing.sm,
+  },
+  actionsLandscape: {
+    paddingTop: spacing.sm,
+  },
+
+  // ── Portrait layout ───────────────────────────────────────────────────────────
   meetingInfo: {
     alignItems: 'center',
-    paddingVertical: spacing.xxl,
+    paddingVertical: spacing.md,
   },
   meetingTitle: {
     fontSize: typography.fontSize.xxxl,
@@ -213,7 +392,7 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
   progressContainer: {
-    paddingVertical: spacing.xl,
+    paddingVertical: spacing.sm,
     alignItems: 'center',
   },
   progressBar: {
@@ -228,7 +407,7 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.full,
   },
   timeRemaining: {
-    marginTop: spacing.md,
+    marginTop: spacing.sm,
     fontSize: typography.fontSize.xxl,
     fontWeight: typography.fontWeight.bold,
   },
@@ -289,7 +468,7 @@ const styles = StyleSheet.create({
     marginLeft: spacing.sm,
   },
   actions: {
-    paddingVertical: spacing.xl,
+    paddingVertical: spacing.md,
   },
   nextMeetingWarning: {
     backgroundColor: colors.warningLight,

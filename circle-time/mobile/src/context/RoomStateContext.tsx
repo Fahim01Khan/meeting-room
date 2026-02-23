@@ -1,8 +1,8 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef, type ReactNode } from 'react';
 import type { RoomState, ScreenType, Meeting, RoomInfo } from '../types/meeting';
-import { fetchRoomState, checkInMeeting, endMeetingEarly } from '../services/api';
+import { fetchRoomState, checkInMeeting, endMeetingEarly, bookAdHoc } from '../services/api';
 import { subscribeToRoomUpdates, startPolling, stopPolling } from '../services/realtime';
 import { cacheRoomState, getCachedRoomState } from '../services/cache';
 
@@ -15,6 +15,7 @@ interface RoomStateContextValue {
   refreshRoomState: () => Promise<void>;
   handleCheckIn: () => Promise<boolean>;
   handleEndEarly: () => Promise<boolean>;
+  handleAdHocBooking: (durationMinutes: number) => Promise<boolean>;
 }
 
 const RoomStateContext = createContext<RoomStateContextValue | null>(null);
@@ -31,6 +32,11 @@ export const RoomStateProvider: React.FC<RoomStateProviderProps> = ({ children }
   const [currentScreen, setCurrentScreen] = useState<ScreenType>('idle');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Ref used by the auto-switch effect to read currentScreen without adding it
+  // to the dependency array (which would cause an infinite update loop).
+  const currentScreenRef = useRef<ScreenType>('idle');
+  currentScreenRef.current = currentScreen;
 
   const refreshRoomState = useCallback(async () => {
     setIsLoading(true);
@@ -131,6 +137,40 @@ export const RoomStateProvider: React.FC<RoomStateProviderProps> = ({ children }
     }
   }, [roomState]);
 
+  const handleAdHocBooking = useCallback(async (durationMinutes: number): Promise<boolean> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const result = await bookAdHoc(ROOM_ID, durationMinutes);
+
+      if (result.success && result.data) {
+        // Set room state optimistically so auto-switch sees 'occupied' + currentMeeting
+        setRoomState((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            status: 'occupied',
+            currentMeeting: {
+              ...result.data!,
+              checkedIn: false,
+            },
+          };
+        });
+        setCurrentScreen('checkin');
+        return true;
+      }
+
+      setError(result.message || 'Booking failed');
+      return false;
+    } catch (err) {
+      setError('Failed to create booking');
+      console.error(err);
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   // Subscribe to real-time updates
   useEffect(() => {
     const unsubscribe = subscribeToRoomUpdates(ROOM_ID, (state) => {
@@ -151,7 +191,9 @@ export const RoomStateProvider: React.FC<RoomStateProviderProps> = ({ children }
     refreshRoomState();
   }, [refreshRoomState]);
 
-  // Auto-switch screens based on room state
+  // Auto-switch screens based on room state.
+  // When the room is available we do NOT override adHocBooking — the user is
+  // actively booking and the room won't show as occupied until after check-in.
   useEffect(() => {
     if (!roomState) return;
 
@@ -161,7 +203,7 @@ export const RoomStateProvider: React.FC<RoomStateProviderProps> = ({ children }
       } else {
         setCurrentScreen('meeting');
       }
-    } else {
+    } else if (currentScreenRef.current !== 'adHocBooking') {
       setCurrentScreen('idle');
     }
   }, [roomState]);
@@ -175,6 +217,7 @@ export const RoomStateProvider: React.FC<RoomStateProviderProps> = ({ children }
     refreshRoomState,
     handleCheckIn,
     handleEndEarly,
+    handleAdHocBooking,
   };
 
   return (

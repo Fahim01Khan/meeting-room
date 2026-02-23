@@ -1,0 +1,35 @@
+buildscript {
+    // Kept inside buildscript so ${kotlinVersion} is resolvable within this block
+    ext {
+        buildToolsVersion = "35.0.0"
+        minSdkVersion = 24
+        compileSdkVersion = 35
+        targetSdkVersion = 34
+        ndkVersion = "27.1.12297006"
+        kotlinVersion = "1.9.24"
+    }
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath("com.android.tools.build:gradle:8.7.0")
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:${kotlinVersion}")
+        // Makes com.facebook.react plugin available to library subprojects (e.g.
+        // react-native-safe-area-context) that use old-style `apply plugin:` when
+        // newArchEnabled=true. Resolved from the composite build in settings.gradle.
+        classpath("com.facebook.react:react-native-gradle-plugin")
+    }
+}
+
+// In Gradle 8.x, buildscript.ext is no longer automatically promoted to project.ext.
+// Re-declare the same values at the project level so that library subprojects (e.g.
+// react-native-safe-area-context) can look them up via rootProject.ext.has()/get().
+ext {
+    buildToolsVersion = "35.0.0"
+    minSdkVersion = 24
+    compileSdkVersion = 35
+    targetSdkVersion = 34
+    ndkVersion = "27.1.12297006"
+    kotlinVersion = "1.9.24"
+}

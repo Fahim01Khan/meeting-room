@@ -20,7 +20,7 @@ export interface RoomInfo {
   capacity: number;
 }
 
-export type RoomStatus = 'available' | 'occupied' | 'upcoming' | 'offline';
+export type RoomStatus = "available" | "occupied" | "upcoming" | "offline";
 
 export interface RoomState {
   room: RoomInfo;
@@ -36,10 +36,21 @@ export interface CheckInResult {
   message?: string;
 }
 
+export interface AdHocBookingResult {
+  success: boolean;
+  message?: string;
+  data?: Meeting;
+}
+
 export interface EndMeetingResult {
   success: boolean;
   message?: string;
   freedMinutes?: number;
 }
 
-export type ScreenType = 'idle' | 'meeting' | 'checkin' | 'endEarly';
+export type ScreenType =
+  | "idle"
+  | "meeting"
+  | "checkin"
+  | "endEarly"
+  | "adHocBooking";

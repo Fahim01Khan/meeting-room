@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Modal } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { colors, typography, spacing, borderRadius, shadows } from '../styles/theme';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { useRoomState } from '../context/RoomStateContext';
@@ -36,17 +36,13 @@ export const EndEarlyModal: React.FC<EndEarlyModalProps> = ({ visible, onClose }
 
   const timeSaved = calculateTimeSaved();
 
+  if (!visible) return null;
+
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={onClose}
-    >
-      <View style={styles.overlay}>
-        <View style={styles.modal}>
-          {/* Header */}
-          <View style={styles.header}>
+    <View style={styles.overlay}>
+      <View style={styles.modal}>
+          {/* Header row: icon + title */}
+          <View style={styles.headerRow}>
             <View style={styles.iconCircle}>
               <Text style={styles.iconText}>⏹</Text>
             </View>
@@ -56,10 +52,10 @@ export const EndEarlyModal: React.FC<EndEarlyModalProps> = ({ visible, onClose }
           {/* Meeting Info */}
           {roomState?.currentMeeting && (
             <View style={styles.meetingInfo}>
-              <Text style={styles.meetingTitle}>
+              <Text style={styles.meetingTitle} numberOfLines={1}>
                 {roomState.currentMeeting.title}
               </Text>
-              <Text style={styles.meetingOrganizer}>
+              <Text style={styles.meetingOrganizer} numberOfLines={1}>
                 {roomState.currentMeeting.organizer}
               </Text>
             </View>
@@ -68,9 +64,9 @@ export const EndEarlyModal: React.FC<EndEarlyModalProps> = ({ visible, onClose }
           {/* Time Saved */}
           <View style={styles.timeSavedContainer}>
             <Text style={styles.timeSavedLabel}>This will free up</Text>
-            <Text style={styles.timeSavedValue}>{timeSaved} minutes</Text>
+            <Text style={styles.timeSavedValue}>{timeSaved} min</Text>
             <Text style={styles.timeSavedSubtext}>
-              The room will become immediately available for others
+              Room becomes immediately available
             </Text>
           </View>
 
@@ -81,36 +77,37 @@ export const EndEarlyModal: React.FC<EndEarlyModalProps> = ({ visible, onClose }
             </View>
           )}
 
-          {/* Actions */}
+          {/* Actions — side by side */}
           <View style={styles.actions}>
-            <PrimaryButton
-              title="End Meeting"
-              onPress={onConfirm}
-              variant="danger"
-              size="large"
-              fullWidth
-              loading={isLoading}
-            />
-            <View style={styles.actionSpacer} />
-            <PrimaryButton
-              title="Cancel"
-              onPress={onClose}
-              variant="outline"
-              size="large"
-              fullWidth
-              disabled={isLoading}
-            />
+            <View style={styles.actionButton}>
+              <PrimaryButton
+                title="End Meeting"
+                onPress={onConfirm}
+                variant="danger"
+                size="medium"
+                fullWidth
+                loading={isLoading}
+              />
+            </View>
+            <View style={styles.actionButton}>
+              <PrimaryButton
+                title="Cancel"
+                onPress={onClose}
+                variant="outline"
+                size="medium"
+                fullWidth
+                disabled={isLoading}
+              />
+            </View>
           </View>
 
           {/* Disclaimer */}
-          <View style={styles.disclaimerContainer}>
-            <Text style={styles.disclaimerText}>
-              The meeting organizer will be notified via email
-            </Text>
-          </View>
-        </View>
+          <Text style={styles.disclaimerText}>
+            The meeting organizer will be notified via email
+          </Text>
+
       </View>
-    </Modal>
+    </View>
   );
 };
 
@@ -132,99 +129,101 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: spacing.xl,
+    padding: spacing.md,
   },
   modal: {
     backgroundColor: colors.background,
     borderRadius: borderRadius.xl,
-    padding: spacing.xxl,
-    width: '100%',
-    maxWidth: 500,
+    padding: spacing.lg,
+    width: '90%',
+    maxWidth: 680,
     ...shadows.lg,
   },
-  header: {
+  headerRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: spacing.xl,
+    justifyContent: 'center',
+    marginBottom: spacing.sm,
+    gap: spacing.sm,
   },
   iconCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: colors.errorLight,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing.lg,
   },
   iconText: {
-    fontSize: 40,
+    fontSize: 22,
   },
   title: {
-    fontSize: typography.fontSize.xxl,
+    fontSize: typography.fontSize.lg,
     fontWeight: typography.fontWeight.bold,
     color: colors.text,
-    textAlign: 'center',
   },
   meetingInfo: {
     backgroundColor: colors.backgroundSecondary,
     borderRadius: borderRadius.lg,
-    padding: spacing.lg,
-    marginBottom: spacing.lg,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    marginBottom: spacing.sm,
     alignItems: 'center',
   },
   meetingTitle: {
-    fontSize: typography.fontSize.xl,
+    fontSize: typography.fontSize.lg,
     fontWeight: typography.fontWeight.semibold,
     color: colors.text,
-    marginBottom: spacing.xs,
+    marginBottom: 2,
     textAlign: 'center',
   },
   meetingOrganizer: {
-    fontSize: typography.fontSize.base,
+    fontSize: typography.fontSize.sm,
     color: colors.textSecondary,
   },
   timeSavedContainer: {
     alignItems: 'center',
-    paddingVertical: spacing.lg,
-    marginBottom: spacing.lg,
+    paddingVertical: spacing.sm,
+    marginBottom: spacing.sm,
   },
   timeSavedLabel: {
-    fontSize: typography.fontSize.lg,
+    fontSize: typography.fontSize.base,
     color: colors.textSecondary,
-    marginBottom: spacing.sm,
+    marginBottom: spacing.xs,
   },
   timeSavedValue: {
-    fontSize: typography.fontSize.xxxl,
+    fontSize: typography.fontSize.xxl,
     fontWeight: typography.fontWeight.bold,
     color: colors.success,
-    marginBottom: spacing.sm,
+    marginBottom: spacing.xs,
   },
   timeSavedSubtext: {
-    fontSize: typography.fontSize.base,
+    fontSize: typography.fontSize.sm,
     color: colors.textMuted,
     textAlign: 'center',
   },
   errorContainer: {
     backgroundColor: colors.errorLight,
-    padding: spacing.md,
+    padding: spacing.sm,
     borderRadius: borderRadius.md,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.sm,
   },
   errorText: {
     color: colors.error,
-    fontSize: typography.fontSize.base,
+    fontSize: typography.fontSize.sm,
     textAlign: 'center',
   },
   actions: {
-    marginBottom: spacing.lg,
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    gap: spacing.sm,
+    marginBottom: spacing.xs,
   },
-  actionSpacer: {
-    height: spacing.md,
-  },
-  disclaimerContainer: {
-    alignItems: 'center',
+  actionButton: {
+    flex: 1,
   },
   disclaimerText: {
-    fontSize: typography.fontSize.sm,
+    fontSize: typography.fontSize.xs,
     color: colors.textMuted,
     textAlign: 'center',
   },

@@ -8,8 +8,7 @@
   - Portrait orientation lock
   - Kiosk mode support (placeholder)
 -->
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.meetingroom.panel">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <!-- Permissions -->
     <uses-permission android:name="android.permission.INTERNET" />
@@ -35,7 +34,7 @@
             android:configChanges="keyboard|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode"
             android:launchMode="singleTask"
             android:windowSoftInputMode="adjustResize"
-            android:screenOrientation="portrait"
+            android:screenOrientation="landscape"
             android:exported="true"
             android:theme="@style/Theme.App.Fullscreen">
             

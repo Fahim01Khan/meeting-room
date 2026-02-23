@@ -8,13 +8,14 @@
  */
 
 import React from 'react';
-import { View, StyleSheet, StatusBar } from 'react-native';
+import { StatusBar } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { RoomStateProvider, useRoomState } from './src/context/RoomStateContext';
 import { IdleScreen } from './src/screens/IdleScreen';
 import { MeetingScreen } from './src/screens/MeetingScreen';
 import { CheckInScreen } from './src/screens/CheckInScreen';
 import { EndEarlyScreen } from './src/screens/EndEarlyModal';
-import { colors } from './src/styles/theme';
+import { AdHocBookingScreen } from './src/screens/AdHocBookingScreen';
 
 // Screen renderer based on current state
 const ScreenRenderer: React.FC = () => {
@@ -27,6 +28,8 @@ const ScreenRenderer: React.FC = () => {
       return <CheckInScreen />;
     case 'endEarly':
       return <EndEarlyScreen />;
+    case 'adHocBooking':
+      return <AdHocBookingScreen />;
     case 'idle':
     default:
       return <IdleScreen />;
@@ -35,21 +38,14 @@ const ScreenRenderer: React.FC = () => {
 
 const App: React.FC = () => {
   return (
-    <RoomStateProvider>
-      <View style={styles.container}>
+    <SafeAreaProvider>
+      <RoomStateProvider>
         {/* Hide status bar for full-screen kiosk mode */}
         <StatusBar hidden />
         <ScreenRenderer />
-      </View>
-    </RoomStateProvider>
+      </RoomStateProvider>
+    </SafeAreaProvider>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-});
 
 export default App;

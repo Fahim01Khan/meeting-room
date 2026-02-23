@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, useWindowDimensions } from 'react-native';
 import { colors, typography, spacing, borderRadius, shadows } from '../styles/theme';
 import { StatusIndicator } from '../components/StatusIndicator';
 import { PrimaryButton } from '../components/PrimaryButton';
@@ -10,6 +10,8 @@ import { useRoomState } from '../context/RoomStateContext';
 export const IdleScreen: React.FC = () => {
   const { roomState, setCurrentScreen } = useRoomState();
   const [currentTime, setCurrentTime] = useState(new Date());
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
 
   // Update time every minute
   useEffect(() => {
@@ -71,9 +73,84 @@ export const IdleScreen: React.FC = () => {
   }
 
   const timeUntilNext = getTimeUntilNextMeeting();
+  const bgColor = roomState.status === 'available' ? colors.successLight : colors.background;
 
+  // Shared next meeting card rendered in both layouts
+  const nextMeetingCard = roomState.nextMeeting ? (
+    <View style={styles.nextMeetingCard}>
+      <Text style={styles.nextMeetingLabel}>NEXT MEETING</Text>
+      <Text style={styles.nextMeetingTitle}>{roomState.nextMeeting.title}</Text>
+      <Text style={styles.nextMeetingTime}>
+        {formatMeetingTime(roomState.nextMeeting.startTime)} –{' '}
+        {formatMeetingTime(roomState.nextMeeting.endTime)}
+      </Text>
+      <Text style={styles.nextMeetingOrganizer}>
+        {roomState.nextMeeting.organizer}
+      </Text>
+      {timeUntilNext && (
+        <View style={styles.timeUntilBadge}>
+          <Text style={styles.timeUntilText}>Starts {timeUntilNext}</Text>
+        </View>
+      )}
+    </View>
+  ) : null;
+
+  // ─── Landscape two-column layout ────────────────────────────────────────────
+  if (isLandscape) {
+    return (
+      <View style={[styles.container, { backgroundColor: bgColor }]}>
+        <View style={styles.landscapeBody}>
+
+          {/* Left column: clock + room identity */}
+          <View style={styles.landscapeLeft}>
+            <Text style={styles.timeLandscape}>{formatTime(currentTime)}</Text>
+            <Text style={styles.dateLandscape}>{formatDate(currentTime)}</Text>
+            <View style={styles.landscapeDivider} />
+            <Text style={styles.roomNameLandscape}>{roomState.room.name}</Text>
+            <Text style={styles.roomLocationLandscape}>
+              {roomState.room.building} · Floor {roomState.room.floor}
+            </Text>
+            <View style={styles.statusContainerLandscape}>
+              <StatusIndicator status={roomState.status} size="large" />
+            </View>
+            <View style={styles.capacityBadgeLandscape}>
+              <Text style={styles.capacityText}>
+                Capacity: {roomState.room.capacity} people
+              </Text>
+            </View>
+          </View>
+
+          {/* Right column: next meeting (top) + action + footer (bottom) */}
+          <View style={styles.landscapeRight}>
+            {/* top slot — empty view keeps space-between working when no meeting */}
+            {nextMeetingCard ?? <View />}
+
+            <View style={styles.landscapeBottom}>
+              {roomState.status === 'available' && (
+                <PrimaryButton
+                  title="Book Now"
+                  onPress={() => setCurrentScreen('adHocBooking')}
+                  variant="primary"
+                  size="large"
+                  fullWidth
+                />
+              )}
+              <View style={styles.footer}>
+                <Text style={styles.footerText}>
+                  Tap to interact · Auto-refreshes every 30 seconds
+                </Text>
+              </View>
+            </View>
+          </View>
+
+        </View>
+      </View>
+    );
+  }
+
+  // ─── Portrait fallback ───────────────────────────────────────────────────────
   return (
-    <View style={[styles.container, { backgroundColor: roomState.status === 'available' ? colors.successLight : colors.background }]}>
+    <View style={[styles.container, styles.portraitContainer, { backgroundColor: bgColor }]}>
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.time}>{formatTime(currentTime)}</Text>
@@ -99,34 +176,14 @@ export const IdleScreen: React.FC = () => {
       </View>
 
       {/* Next Meeting */}
-      {roomState.nextMeeting && (
-        <View style={styles.nextMeetingCard}>
-          <Text style={styles.nextMeetingLabel}>NEXT MEETING</Text>
-          <Text style={styles.nextMeetingTitle}>{roomState.nextMeeting.title}</Text>
-          <Text style={styles.nextMeetingTime}>
-            {formatMeetingTime(roomState.nextMeeting.startTime)} -{' '}
-            {formatMeetingTime(roomState.nextMeeting.endTime)}
-          </Text>
-          <Text style={styles.nextMeetingOrganizer}>
-            {roomState.nextMeeting.organizer}
-          </Text>
-          {timeUntilNext && (
-            <View style={styles.timeUntilBadge}>
-              <Text style={styles.timeUntilText}>Starts {timeUntilNext}</Text>
-            </View>
-          )}
-        </View>
-      )}
+      {nextMeetingCard}
 
       {/* Quick Book Button (if available) */}
       {roomState.status === 'available' && (
         <View style={styles.actionContainer}>
           <PrimaryButton
             title="Book Now"
-            onPress={() => {
-              // TODO: Implement quick booking
-              console.log('Quick book pressed');
-            }}
+            onPress={() => setCurrentScreen('adHocBooking')}
             variant="primary"
             size="large"
             fullWidth
@@ -145,9 +202,12 @@ export const IdleScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
+  // ── Core ──────────────────────────────────────────────────────────────────────
   container: {
     flex: 1,
     padding: spacing.xl,
+  },
+  portraitContainer: {
     justifyContent: 'space-between',
   },
   loadingText: {
@@ -155,9 +215,66 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     textAlign: 'center',
   },
+
+  // ── Landscape layout ──────────────────────────────────────────────────────────
+  landscapeBody: {
+    flex: 1,
+    flexDirection: 'row',
+    gap: spacing.xl,
+  },
+  landscapeLeft: {
+    flex: 2,
+    justifyContent: 'center',
+  },
+  landscapeRight: {
+    flex: 3,
+    justifyContent: 'space-between',
+  },
+  landscapeBottom: {
+    gap: spacing.md,
+  },
+  timeLandscape: {
+    fontSize: typography.fontSize.xxxl,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.text,
+  },
+  dateLandscape: {
+    fontSize: typography.fontSize.lg,
+    color: colors.textSecondary,
+    marginTop: spacing.xs,
+  },
+  landscapeDivider: {
+    height: 2,
+    backgroundColor: colors.border,
+    marginVertical: spacing.md,
+  },
+  roomNameLandscape: {
+    fontSize: typography.fontSize.xxl,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.text,
+  },
+  roomLocationLandscape: {
+    fontSize: typography.fontSize.lg,
+    color: colors.textSecondary,
+    marginTop: spacing.xs,
+  },
+  statusContainerLandscape: {
+    marginTop: spacing.md,
+    alignSelf: 'flex-start',
+  },
+  capacityBadgeLandscape: {
+    alignSelf: 'flex-start',
+    backgroundColor: colors.backgroundSecondary,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.full,
+    marginTop: spacing.md,
+  },
+
+  // ── Portrait header ───────────────────────────────────────────────────────────
   header: {
     alignItems: 'center',
-    paddingVertical: spacing.lg,
+    paddingVertical: spacing.sm,
   },
   time: {
     fontSize: typography.fontSize.display,
@@ -169,9 +286,11 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     marginTop: spacing.xs,
   },
+
+  // ── Portrait room info ────────────────────────────────────────────────────────
   roomInfo: {
     alignItems: 'center',
-    paddingVertical: spacing.xxl,
+    paddingVertical: spacing.md,
   },
   roomName: {
     fontSize: typography.fontSize.xxxl,
@@ -187,22 +306,25 @@ const styles = StyleSheet.create({
   statusContainer: {
     marginTop: spacing.lg,
   },
+
+  // ── Shared: capacity badge ────────────────────────────────────────────────────
   capacityBadge: {
     alignSelf: 'center',
     backgroundColor: colors.backgroundSecondary,
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.xs,
     borderRadius: borderRadius.full,
   },
   capacityText: {
     fontSize: typography.fontSize.lg,
     color: colors.textSecondary,
   },
+
+  // ── Shared: next meeting card ─────────────────────────────────────────────────
   nextMeetingCard: {
     backgroundColor: colors.background,
     borderRadius: borderRadius.xl,
-    padding: spacing.xl,
-    marginVertical: spacing.lg,
+    padding: spacing.lg,
     ...shadows.md,
   },
   nextMeetingLabel: {
@@ -240,9 +362,13 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeight.medium,
     color: colors.warning,
   },
+
+  // ── Portrait action ───────────────────────────────────────────────────────────
   actionContainer: {
-    paddingVertical: spacing.lg,
+    paddingVertical: spacing.xs,
   },
+
+  // ── Shared: footer ────────────────────────────────────────────────────────────
   footer: {
     alignItems: 'center',
     paddingVertical: spacing.md,

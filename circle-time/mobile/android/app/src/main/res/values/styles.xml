@@ -18,13 +18,10 @@
         <!-- Hide status bar -->
         <item name="android:windowFullscreen">true</item>
         
-        <!-- Hide navigation bar -->
-        <item name="android:windowTranslucentNavigation">true</item>
-        <item name="android:windowTranslucentStatus">true</item>
-        
-        <!-- Prevent content from being obscured -->
-        <item name="android:fitsSystemWindows">false</item>
-        
+        <!-- Draw edge-to-edge; immersive mode hides system bars entirely -->
+        <item name="android:windowTranslucentNavigation">false</item>
+        <item name="android:windowTranslucentStatus">false</item>
+
         <!-- Keep screen on -->
         <item name="android:keepScreenOn">true</item>
         
@@ -32,8 +29,7 @@
         <item name="android:windowNoTitle">true</item>
         <item name="android:windowActionBar">false</item>
         
-        <!-- Immersive mode flags (set programmatically) -->
-        <!-- These are typically set in MainActivity for API compatibility -->
+        <!-- Immersive mode is set programmatically in MainActivity -->
     </style>
 
     <!-- Splash screen theme -->
