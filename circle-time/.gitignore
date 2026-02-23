@@ -76,11 +76,6 @@ backend/media/
 backend/staticfiles/
 *.egg-info/
 
-# =========================
-# Migrations (keep __init__.py)
-# =========================
-**/migrations/*
-!**/migrations/__init__.py
 
 # =========================
 # Testing / Coverage

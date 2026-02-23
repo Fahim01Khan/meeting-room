@@ -427,3 +427,50 @@ Authorization: Bearer {{token}}
 ### Export CSV
 GET {{baseUrl}}/analytics/export?startDate={{startDate}}&endDate={{endDate}}&format=csv HTTP/1.1
 Authorization: Bearer {{token}}
+
+
+### =========================================================================
+### Pairing Flow (Phase 1)
+### =========================================================================
+
+### Step 1 — Tablet generates a pairing code (AllowAny)
+# @name generateCode
+POST {{baseUrl}}/panel/pairing-codes HTTP/1.1
+Content-Type: application/json
+
+{
+  "deviceSerial": "tablet-test-001"
+}
+
+###
+@pairingCode = {{generateCode.response.body.data.code}}
+
+### Step 2 — Poll pairing status (pending, then paired after Step 3)
+GET {{baseUrl}}/panel/pairing-status/{{pairingCode}} HTTP/1.1
+
+### Step 3 — Admin pairs the code to a room (IsAuthenticated)
+POST {{baseUrl}}/panel/pair-device HTTP/1.1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "code": "{{pairingCode}}",
+  "roomId": "{{roomId}}"
+}
+
+### Step 4 — Poll again (expect status='paired' + roomId)
+GET {{baseUrl}}/panel/pairing-status/{{pairingCode}} HTTP/1.1
+
+### List all paired devices (admin)
+GET {{baseUrl}}/panel/devices HTTP/1.1
+Authorization: Bearer {{token}}
+
+### ERROR: expired/invalid code (expect 404 or 400)
+POST {{baseUrl}}/panel/pair-device HTTP/1.1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "code": "000000",
+  "roomId": "{{roomId}}"
+}

@@ -35,6 +35,13 @@ users_data = [
         "role": "admin",
         "department": "Management",
     },
+    {
+        "email": "kiosk@circletime.io",
+        "name": "Kiosk Service Account",
+        "password": "kiosk123",
+        "role": "user",
+        "department": "Facilities",
+    },
 ]
 
 for u in users_data:

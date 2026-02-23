@@ -1,5 +1,13 @@
 from django.contrib import admin
-from panel.models import DeviceRegistration, IssueReport
+from panel.models import DeviceRegistration, IssueReport, PairingCode
+
+
+@admin.register(PairingCode)
+class PairingCodeAdmin(admin.ModelAdmin):
+    list_display = ("code", "device_serial", "status", "room", "created_at", "expires_at", "paired_at")
+    list_filter = ("status",)
+    search_fields = ("code", "device_serial")
+    readonly_fields = ("created_at", "expires_at", "paired_at")
 
 
 @admin.register(DeviceRegistration)

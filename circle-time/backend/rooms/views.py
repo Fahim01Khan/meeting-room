@@ -252,8 +252,6 @@ def room_state(request, room_id):
         if booking is None:
             return None
         organizer = booking.organizer
-        full_name = organizer.get_full_name().strip() if organizer else ""
-        organizer_name = full_name or (organizer.email if organizer else "")
         try:
             attendee_count = booking.booking_attendees.count()
         except Exception:
@@ -261,12 +259,12 @@ def room_state(request, room_id):
         return {
             "id": str(booking.id),
             "title": booking.title,
-            "organizer": organizer_name,
+            "organizer": organizer.name if organizer else "",
             "organizerEmail": organizer.email if organizer else "",
             "startTime": booking.start_time.isoformat(),
             "endTime": booking.end_time.isoformat(),
             "attendeeCount": attendee_count,
-            "checkedIn": booking.status == "checked_in",
+            "checkedIn": booking.checked_in,
             "checkedInAt": booking.checked_in_at.isoformat() if booking.checked_in_at else None,
         }
 

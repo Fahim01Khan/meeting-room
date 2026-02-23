@@ -9,13 +9,14 @@ Key contract differences vs web:
 from django.utils import timezone
 from django.conf import settings as django_settings
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from datetime import timedelta
 
 from rooms.models import Room
 from bookings.models import Booking
+from panel.models import PairingCode, DeviceRegistration
 
 
 # ---------------------------------------------------------------------------
@@ -199,3 +200,189 @@ def meeting_end_early(request, meeting_id):
             "freedMinutes": freed,
         },
     })
+
+
+# ---------------------------------------------------------------------------
+# POST /api/panel/pairing-codes  (tablet generates a pairing code)
+# ---------------------------------------------------------------------------
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def generate_pairing_code(request):
+    """
+    Tablet calls this to get a 6-digit pairing code.
+    Body: { "deviceSerial": "string" }
+    """
+    device_serial = request.data.get("deviceSerial")
+    if not device_serial:
+        return Response(
+            {"success": False, "message": "deviceSerial is required"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    # Expire any existing pending codes for this device
+    PairingCode.objects.filter(
+        device_serial=device_serial, status="pending"
+    ).update(status="expired")
+
+    code = PairingCode.generate_unique_code()
+    now = timezone.now()
+    pairing = PairingCode.objects.create(
+        code=code,
+        device_serial=device_serial,
+        expires_at=now + timedelta(minutes=PairingCode.EXPIRY_MINUTES),
+    )
+
+    return Response(
+        {
+            "success": True,
+            "data": {
+                "code": pairing.code,
+                "expiresAt": pairing.expires_at.isoformat(),
+            },
+        },
+        status=status.HTTP_201_CREATED,
+    )
+
+
+# ---------------------------------------------------------------------------
+# GET /api/panel/pairing-status/<code>  (tablet polls this)
+# ---------------------------------------------------------------------------
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def pairing_status(request, code):
+    """
+    Tablet polls this every ~3 seconds to learn when it has been paired.
+    Returns status + roomId/roomName once an admin has paired it.
+    """
+    try:
+        pairing = PairingCode.objects.select_related("room").get(code=code)
+    except PairingCode.DoesNotExist:
+        return Response(
+            {"success": False, "message": "Pairing code not found"},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    # Auto-expire if past the deadline
+    if pairing.status == "pending" and pairing.is_expired:
+        pairing.status = "expired"
+        pairing.save(update_fields=["status"])
+
+    data = {
+        "status": pairing.status,
+        "roomId": str(pairing.room.id) if pairing.room else None,
+        "roomName": pairing.room.name if pairing.room else None,
+    }
+
+    return Response({"success": True, "data": data})
+
+
+# ---------------------------------------------------------------------------
+# POST /api/panel/pair-device  (web admin pairs a code to a room)
+# ---------------------------------------------------------------------------
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def pair_device(request):
+    """
+    Admin submits the 6-digit code shown on the tablet plus a roomId.
+    Backend creates/updates DeviceRegistration and marks code as paired.
+    Body: { "code": "123456", "roomId": "uuid" }
+    """
+    code_value = request.data.get("code")
+    room_id = request.data.get("roomId")
+
+    if not code_value or not room_id:
+        return Response(
+            {"success": False, "message": "code and roomId are required"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    # Find the pairing code
+    try:
+        pairing = PairingCode.objects.get(code=code_value)
+    except PairingCode.DoesNotExist:
+        return Response(
+            {"success": False, "message": "Pairing code not found"},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    # Validate state
+    if pairing.status == "paired":
+        return Response(
+            {"success": False, "message": "Code has already been paired"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    if pairing.is_expired:
+        pairing.status = "expired"
+        pairing.save(update_fields=["status"])
+        return Response(
+            {"success": False, "message": "Pairing code has expired"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    # Find the room
+    try:
+        room = Room.objects.get(id=room_id)
+    except Room.DoesNotExist:
+        return Response(
+            {"success": False, "message": "Room not found"},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    # Create or update DeviceRegistration
+    device, _created = DeviceRegistration.objects.update_or_create(
+        device_serial=pairing.device_serial,
+        defaults={"room": room, "is_active": True},
+    )
+
+    # Mark pairing code as paired
+    now = timezone.now()
+    pairing.status = "paired"
+    pairing.room = room
+    pairing.paired_at = now
+    pairing.save(update_fields=["status", "room", "paired_at"])
+
+    return Response(
+        {
+            "success": True,
+            "data": {
+                "roomId": str(room.id),
+                "roomName": room.name,
+            },
+        }
+    )
+
+
+# ---------------------------------------------------------------------------
+# GET /api/panel/devices  (web admin — list paired devices)
+# ---------------------------------------------------------------------------
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def list_devices(request):
+    """
+    List all active DeviceRegistrations with room details.
+    """
+    devices = (
+        DeviceRegistration.objects.filter(is_active=True)
+        .select_related("room")
+        .order_by("-registered_at")
+    )
+
+    data = [
+        {
+            "id": str(d.id),
+            "deviceSerial": d.device_serial,
+            "roomId": str(d.room.id),
+            "roomName": d.room.name,
+            "roomBuilding": d.room.building,
+            "roomFloor": d.room.floor,
+            "registeredAt": d.registered_at.isoformat(),
+            "isActive": d.is_active,
+        }
+        for d in devices
+    ]
+
+    return Response({"success": True, "data": data})
