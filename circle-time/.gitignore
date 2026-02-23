@@ -23,7 +23,7 @@ yarn-error.log*
 .env
 .env.*
 !.env.example
-.env.example
+
 # =========================
 # Node / Frontend (Web + Mobile)
 # =========================
@@ -48,6 +48,7 @@ mobile/.expo/
 mobile/android/.gradle/
 mobile/android/build/
 mobile/android/app/build/
+mobile/android/app/.cxx/
 mobile/ios/Pods/
 mobile/ios/build/
 
