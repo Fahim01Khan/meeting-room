@@ -13,6 +13,8 @@ import { GhostingView } from '../pages/Admin/GhostingView';
 import { CapacityView } from '../pages/Admin/CapacityView';
 import { DevicesPage } from '../pages/Admin/DevicesPage';
 import { RoomsPage } from '../pages/Admin/RoomsPage';
+import { UsersPage } from '../pages/Admin/UsersPage';
+import { AcceptInvitePage } from '../pages/AcceptInvitePage';
 import type { Room } from '../types/room';
 
 export const Router: React.FC = () => {
@@ -20,6 +22,7 @@ export const Router: React.FC = () => {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/accept-invite" element={<AcceptInvitePage />} />
         
         <Route
           path="/"
@@ -42,6 +45,7 @@ export const Router: React.FC = () => {
           <Route path="admin/utilization" element={<UtilizationView />} />
           <Route path="admin/ghosting" element={<GhostingView />} />
           <Route path="admin/capacity" element={<CapacityView />} />
+          <Route path="admin/users" element={<UsersPage />} />
           <Route path="admin/rooms" element={<RoomsPage />} />
           <Route path="admin/devices" element={<DevicesPage />} />
         </Route>
