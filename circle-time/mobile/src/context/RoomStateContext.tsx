@@ -1,57 +1,96 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef, type ReactNode } from 'react';
-import type { RoomState, ScreenType, Meeting, RoomInfo } from '../types/meeting';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import type { RoomState, ScreenType } from '../types/meeting';
 import { fetchRoomState, checkInMeeting, endMeetingEarly, bookAdHoc } from '../services/api';
 import { subscribeToRoomUpdates, startPolling, stopPolling } from '../services/realtime';
 import { cacheRoomState, getCachedRoomState } from '../services/cache';
+
+const ROOM_ID_STORAGE_KEY = '@circle_time:room_id';
 
 interface RoomStateContextValue {
   roomState: RoomState | null;
   currentScreen: ScreenType;
   isLoading: boolean;
   error: string | null;
+  roomId: string | null;
   setCurrentScreen: (screen: ScreenType) => void;
   refreshRoomState: () => Promise<void>;
   handleCheckIn: () => Promise<boolean>;
   handleEndEarly: () => Promise<boolean>;
   handleAdHocBooking: (durationMinutes: number) => Promise<boolean>;
+  handlePaired: (newRoomId: string) => Promise<void>;
+  clearPairing: () => Promise<void>;
 }
 
 const RoomStateContext = createContext<RoomStateContextValue | null>(null);
-
-// Configuration - would come from device setup in production
-const ROOM_ID = '00000000-0000-0000-0000-000000000001';
 
 interface RoomStateProviderProps {
   children: ReactNode;
 }
 
 export const RoomStateProvider: React.FC<RoomStateProviderProps> = ({ children }) => {
+  const [roomId, setRoomId] = useState<string | null>(null);
   const [roomState, setRoomState] = useState<RoomState | null>(null);
-  const [currentScreen, setCurrentScreen] = useState<ScreenType>('idle');
-  const [isLoading, setIsLoading] = useState(false);
+  const [currentScreen, setCurrentScreen] = useState<ScreenType>('pairing');
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   // Ref used by the auto-switch effect to read currentScreen without adding it
   // to the dependency array (which would cause an infinite update loop).
-  const currentScreenRef = useRef<ScreenType>('idle');
+  const currentScreenRef = useRef<ScreenType>('pairing');
   currentScreenRef.current = currentScreen;
 
+  // ── On mount: load saved roomId from AsyncStorage ──────────────────────
+  useEffect(() => {
+    AsyncStorage.getItem(ROOM_ID_STORAGE_KEY)
+      .then((savedId) => {
+        if (savedId) {
+          setRoomId(savedId);
+          setCurrentScreen('idle');
+        } else {
+          // No paired room yet — show pairing screen
+          setCurrentScreen('pairing');
+        }
+      })
+      .catch(() => {
+        setCurrentScreen('pairing');
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
+  }, []);
+
+  // ── Called by PairingScreen when admin pairs the device ────────────────
+  const handlePaired = useCallback(async (newRoomId: string) => {
+    await AsyncStorage.setItem(ROOM_ID_STORAGE_KEY, newRoomId);
+    setRoomId(newRoomId);
+    setCurrentScreen('idle');
+  }, []);
+
+  // ── Clear the pairing (reset to pairing screen) ───────────────────────
+  const clearPairing = useCallback(async () => {
+    await AsyncStorage.removeItem(ROOM_ID_STORAGE_KEY);
+    stopPolling();
+    setRoomId(null);
+    setRoomState(null);
+    setCurrentScreen('pairing');
+  }, []);
+
   const refreshRoomState = useCallback(async () => {
+    if (!roomId) return;
     setIsLoading(true);
     setError(null);
 
     try {
-      // Try to fetch fresh data
-      const state = await fetchRoomState(ROOM_ID);
+      const state = await fetchRoomState(roomId);
 
       if (state) {
         setRoomState(state);
-        await cacheRoomState(ROOM_ID, state);
+        await cacheRoomState(roomId, state);
       } else {
-        // Fall back to cached data
-        const cached = await getCachedRoomState(ROOM_ID);
+        const cached = await getCachedRoomState(roomId);
         if (cached) {
           setRoomState(cached);
         }
@@ -60,15 +99,14 @@ export const RoomStateProvider: React.FC<RoomStateProviderProps> = ({ children }
       setError('Failed to fetch room state');
       console.error(err);
 
-      // Try cached data on error
-      const cached = await getCachedRoomState(ROOM_ID);
+      const cached = await getCachedRoomState(roomId);
       if (cached) {
         setRoomState(cached);
       }
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [roomId]);
 
   const handleCheckIn = useCallback(async (): Promise<boolean> => {
     if (!roomState?.currentMeeting) return false;
@@ -78,7 +116,6 @@ export const RoomStateProvider: React.FC<RoomStateProviderProps> = ({ children }
       const result = await checkInMeeting(roomState.currentMeeting.id);
 
       if (result.success) {
-        // Update local state
         setRoomState((prev) => {
           if (!prev || !prev.currentMeeting) return prev;
           return {
@@ -113,7 +150,6 @@ export const RoomStateProvider: React.FC<RoomStateProviderProps> = ({ children }
       const result = await endMeetingEarly(roomState.currentMeeting.id);
 
       if (result.success) {
-        // Update local state
         setRoomState((prev) => {
           if (!prev) return prev;
           return {
@@ -138,13 +174,13 @@ export const RoomStateProvider: React.FC<RoomStateProviderProps> = ({ children }
   }, [roomState]);
 
   const handleAdHocBooking = useCallback(async (durationMinutes: number): Promise<boolean> => {
+    if (!roomId) return false;
     setIsLoading(true);
     setError(null);
     try {
-      const result = await bookAdHoc(ROOM_ID, durationMinutes);
+      const result = await bookAdHoc(roomId, durationMinutes);
 
       if (result.success && result.data) {
-        // Set room state optimistically so auto-switch sees 'occupied' + currentMeeting
         setRoomState((prev) => {
           if (!prev) return prev;
           return {
@@ -169,31 +205,33 @@ export const RoomStateProvider: React.FC<RoomStateProviderProps> = ({ children }
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [roomId]);
 
-  // Subscribe to real-time updates
+  // ── Subscribe to real-time updates when roomId is available ───────────
   useEffect(() => {
-    const unsubscribe = subscribeToRoomUpdates(ROOM_ID, (state) => {
+    if (!roomId) return;
+
+    const unsubscribe = subscribeToRoomUpdates(roomId, (state) => {
       setRoomState(state);
-      cacheRoomState(ROOM_ID, state);
+      cacheRoomState(roomId, state);
     });
 
-    startPolling(ROOM_ID);
+    startPolling(roomId);
 
     return () => {
       unsubscribe();
       stopPolling();
     };
-  }, []);
+  }, [roomId]);
 
-  // Initial load
+  // ── Initial room state load when roomId is set ────────────────────────
   useEffect(() => {
-    refreshRoomState();
-  }, [refreshRoomState]);
+    if (roomId) {
+      refreshRoomState();
+    }
+  }, [roomId, refreshRoomState]);
 
-  // Auto-switch screens based on room state.
-  // When the room is available we do NOT override adHocBooking — the user is
-  // actively booking and the room won't show as occupied until after check-in.
+  // ── Auto-switch screens based on room state ───────────────────────────
   useEffect(() => {
     if (!roomState) return;
 
@@ -213,11 +251,14 @@ export const RoomStateProvider: React.FC<RoomStateProviderProps> = ({ children }
     currentScreen,
     isLoading,
     error,
+    roomId,
     setCurrentScreen,
     refreshRoomState,
     handleCheckIn,
     handleEndEarly,
     handleAdHocBooking,
+    handlePaired,
+    clearPairing,
   };
 
   return (

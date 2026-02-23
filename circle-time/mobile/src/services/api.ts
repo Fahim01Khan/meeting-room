@@ -11,6 +11,8 @@ import type {
   EndMeetingResult,
   AdHocBookingResult,
   Meeting,
+  PairingCodeResult,
+  PairingStatusResult,
 } from "../types/meeting";
 
 const API_BASE_URL: string =
@@ -105,4 +107,60 @@ export const extendMeeting = async (
   // No backend endpoint yet — stub
   console.log(`Extending meeting ${meetingId} by ${minutes} minutes`);
   return false;
+};
+
+// ---------------------------------------------------------------------------
+// Pairing
+// ---------------------------------------------------------------------------
+
+export const generatePairingCode = async (
+  deviceSerial: string,
+): Promise<PairingCodeResult> => {
+  try {
+    const res = await fetch(`${API_BASE_URL}/panel/pairing-codes`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ deviceSerial }),
+    });
+    const json = await res.json();
+    if (json.success && json.data) {
+      return {
+        success: true,
+        data: { code: json.data.code, expiresAt: json.data.expiresAt },
+      };
+    }
+    return {
+      success: false,
+      message: json.message || "Failed to generate code",
+    };
+  } catch (err) {
+    console.error("generatePairingCode error:", err);
+    return { success: false, message: "Network error" };
+  }
+};
+
+export const pollPairingStatus = async (
+  code: string,
+): Promise<PairingStatusResult> => {
+  try {
+    const res = await fetch(`${API_BASE_URL}/panel/pairing-status/${code}`);
+    const json = await res.json();
+    if (json.success && json.data) {
+      return {
+        success: true,
+        data: {
+          status: json.data.status,
+          roomId: json.data.roomId,
+          roomName: json.data.roomName,
+        },
+      };
+    }
+    return {
+      success: false,
+      message: json.message || "Failed to check status",
+    };
+  } catch (err) {
+    console.error("pollPairingStatus error:", err);
+    return { success: false, message: "Network error" };
+  }
 };

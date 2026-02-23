@@ -53,4 +53,26 @@ export type ScreenType =
   | "meeting"
   | "checkin"
   | "endEarly"
-  | "adHocBooking";
+  | "adHocBooking"
+  | "pairing";
+
+// Pairing types
+
+export interface PairingCodeResult {
+  success: boolean;
+  message?: string;
+  data?: {
+    code: string;
+    expiresAt: string;
+  };
+}
+
+export interface PairingStatusResult {
+  success: boolean;
+  message?: string;
+  data?: {
+    status: "pending" | "paired" | "expired";
+    roomId: string | null;
+    roomName: string | null;
+  };
+}
