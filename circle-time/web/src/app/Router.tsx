@@ -14,6 +14,7 @@ import { CapacityView } from '../pages/Admin/CapacityView';
 import { DevicesPage } from '../pages/Admin/DevicesPage';
 import { RoomsPage } from '../pages/Admin/RoomsPage';
 import { UsersPage } from '../pages/Admin/UsersPage';
+import { SettingsPage } from '../pages/Admin/SettingsPage';
 import { AcceptInvitePage } from '../pages/AcceptInvitePage';
 import type { Room } from '../types/room';
 
@@ -48,6 +49,7 @@ export const Router: React.FC = () => {
           <Route path="admin/users" element={<UsersPage />} />
           <Route path="admin/rooms" element={<RoomsPage />} />
           <Route path="admin/devices" element={<DevicesPage />} />
+          <Route path="admin/settings" element={<SettingsPage />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />
