@@ -1,12 +1,22 @@
+import logging
+import secrets
+
 from django.contrib.auth import authenticate
 from django.conf import settings
+from django.core.mail import send_mail
+from django.core.validators import validate_email
+from django.core.exceptions import ValidationError
+from django.utils import timezone
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
 
+from accounts.models import User, UserInvitation
 from accounts.serializers import LoginSerializer, UserSerializer
+
+logger = logging.getLogger(__name__)
 
 
 @api_view(["POST"])
@@ -114,4 +124,334 @@ def oidc_callback_view(request):
     return Response(
         {"success": False, "message": "OIDC callback not implemented"},
         status=status.HTTP_501_NOT_IMPLEMENTED,
+    )
+
+
+# ---------------------------------------------------------------------------
+# User management (admin)
+# ---------------------------------------------------------------------------
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def list_users(request):
+    """
+    GET /api/auth/users
+    List all users (excluding kiosk system user). Admin only.
+    """
+    if request.user.role != "admin":
+        return Response(
+            {"success": False, "message": "Admin access required"},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
+    users = User.objects.exclude(email="kiosk@circletime.io").order_by("name")
+    data = []
+    for u in users:
+        data.append({
+            "id": str(u.id),
+            "email": u.email,
+            "name": u.name,
+            "role": u.role,
+            "department": u.department,
+            "dateJoined": u.date_joined.isoformat(),
+        })
+
+    return Response(
+        {"success": True, "data": data},
+        status=status.HTTP_200_OK,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Invitation endpoints
+# ---------------------------------------------------------------------------
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def send_invite(request):
+    """
+    POST /api/auth/invite
+    Send an email invitation. Admin only.
+    Body: { email, role?, department? }
+    """
+    if request.user.role != "admin":
+        return Response(
+            {"success": False, "message": "Admin access required"},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
+    email = (request.data.get("email") or "").strip().lower()
+    role = request.data.get("role", "user")
+    department = request.data.get("department", "").strip() or None
+
+    # Validate email format
+    try:
+        validate_email(email)
+    except ValidationError:
+        return Response(
+            {"success": False, "message": "Invalid email address."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    # Check email not already a user
+    if User.objects.filter(email=email).exists():
+        return Response(
+            {"success": False, "message": "A user with this email already exists."},
+            status=status.HTTP_409_CONFLICT,
+        )
+
+    # Check no pending non-expired invitation for this email
+    pending = UserInvitation.objects.filter(
+        email=email,
+        status="pending",
+        expires_at__gt=timezone.now(),
+    ).exists()
+    if pending:
+        return Response(
+            {"success": False, "message": "A pending invitation for this email already exists."},
+            status=status.HTTP_409_CONFLICT,
+        )
+
+    # Validate role
+    if role not in ("admin", "user"):
+        role = "user"
+
+    # Create invitation
+    invitation = UserInvitation(
+        email=email,
+        invited_by=request.user,
+        role=role,
+        department=department,
+        token=secrets.token_urlsafe(48),
+    )
+    invitation.save()
+
+    # Send invite email
+    frontend_url = getattr(settings, "FRONTEND_URL", "http://localhost:5173")
+    invite_link = f"{frontend_url}/accept-invite?token={invitation.token}"
+    subject = "You've been invited to Circle Time"
+    body = (
+        f"Hi,\n\n"
+        f"You've been invited to join Circle Time as a {invitation.role}.\n\n"
+        f"Click the link below to set up your account:\n"
+        f"{invite_link}\n\n"
+        f"This link expires in 48 hours.\n\n"
+        f"— The Circle Time Team"
+    )
+
+    try:
+        send_mail(
+            subject,
+            body,
+            settings.DEFAULT_FROM_EMAIL,
+            [email],
+            fail_silently=False,
+        )
+    except Exception as exc:
+        logger.error("Failed to send invite email to %s: %s", email, exc)
+
+    return Response(
+        {
+            "success": True,
+            "data": {
+                "id": str(invitation.id),
+                "email": invitation.email,
+                "role": invitation.role,
+                "expiresAt": invitation.expires_at.isoformat(),
+            },
+        },
+        status=status.HTTP_201_CREATED,
+    )
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def accept_invite(request):
+    """
+    POST /api/auth/accept-invite
+    Accept an invitation and create the user account.
+    Body: { token, name, password }
+    """
+    token = (request.data.get("token") or "").strip()
+    name = (request.data.get("name") or "").strip()
+    password = request.data.get("password", "")
+
+    if not token or not name or not password:
+        return Response(
+            {"success": False, "message": "Token, name, and password are required."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if len(password) < 8:
+        return Response(
+            {"success": False, "message": "Password must be at least 8 characters."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    try:
+        invitation = UserInvitation.objects.get(token=token)
+    except UserInvitation.DoesNotExist:
+        return Response(
+            {"success": False, "message": "Invalid invitation token."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    if invitation.status != "pending":
+        return Response(
+            {"success": False, "message": "This invitation has already been used or cancelled."},
+            status=status.HTTP_410_GONE,
+        )
+
+    if invitation.is_expired:
+        invitation.status = "expired"
+        invitation.save(update_fields=["status"])
+        return Response(
+            {"success": False, "message": "This invitation has expired."},
+            status=status.HTTP_410_GONE,
+        )
+
+    # Check email not already taken (race condition guard)
+    if User.objects.filter(email=invitation.email).exists():
+        return Response(
+            {"success": False, "message": "A user with this email already exists."},
+            status=status.HTTP_409_CONFLICT,
+        )
+
+    # Create user
+    user = User.objects.create_user(
+        email=invitation.email,
+        password=password,
+        name=name,
+        role=invitation.role,
+        department=invitation.department,
+    )
+
+    # Mark invitation as accepted
+    invitation.status = "accepted"
+    invitation.accepted_at = timezone.now()
+    invitation.save(update_fields=["status", "accepted_at"])
+
+    return Response(
+        {
+            "success": True,
+            "data": {
+                "id": str(user.id),
+                "email": user.email,
+                "name": user.name,
+                "role": user.role,
+            },
+        },
+        status=status.HTTP_201_CREATED,
+    )
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def validate_invite_token(request, token):
+    """
+    GET /api/auth/invite/<token>/validate
+    Validate an invitation token before the user fills out the acceptance form.
+    """
+    try:
+        invitation = UserInvitation.objects.get(token=token)
+    except UserInvitation.DoesNotExist:
+        return Response(
+            {"success": False, "message": "Invitation not found."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    if invitation.status != "pending" or invitation.is_expired:
+        if invitation.status == "pending" and invitation.is_expired:
+            invitation.status = "expired"
+            invitation.save(update_fields=["status"])
+        return Response(
+            {"success": False, "message": "This invitation has expired or been used."},
+            status=status.HTTP_410_GONE,
+        )
+
+    return Response(
+        {
+            "success": True,
+            "data": {
+                "email": invitation.email,
+                "role": invitation.role,
+                "valid": True,
+            },
+        },
+        status=status.HTTP_200_OK,
+    )
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def list_invitations(request):
+    """
+    GET /api/auth/invites
+    List all invitations. Admin only.
+    """
+    if request.user.role != "admin":
+        return Response(
+            {"success": False, "message": "Admin access required"},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
+    invitations = UserInvitation.objects.select_related("invited_by").all()
+    data = []
+    for inv in invitations:
+        # Auto-expire stale pending invitations on read
+        if inv.status == "pending" and inv.is_expired:
+            inv.status = "expired"
+            inv.save(update_fields=["status"])
+
+        data.append({
+            "id": str(inv.id),
+            "email": inv.email,
+            "role": inv.role,
+            "department": inv.department,
+            "status": inv.status,
+            "invitedBy": inv.invited_by.name if inv.invited_by else None,
+            "createdAt": inv.created_at.isoformat(),
+            "expiresAt": inv.expires_at.isoformat(),
+            "acceptedAt": inv.accepted_at.isoformat() if inv.accepted_at else None,
+        })
+
+    return Response(
+        {"success": True, "data": data},
+        status=status.HTTP_200_OK,
+    )
+
+
+@api_view(["DELETE"])
+@permission_classes([IsAuthenticated])
+def cancel_invitation(request, invitation_id):
+    """
+    DELETE /api/auth/invites/<id>
+    Cancel a pending invitation. Admin only.
+    """
+    if request.user.role != "admin":
+        return Response(
+            {"success": False, "message": "Admin access required"},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
+    try:
+        invitation = UserInvitation.objects.get(id=invitation_id)
+    except (UserInvitation.DoesNotExist, ValueError):
+        return Response(
+            {"success": False, "message": "Invitation not found."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    if invitation.status != "pending":
+        return Response(
+            {"success": False, "message": "Only pending invitations can be cancelled."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    invitation.status = "expired"
+    invitation.save(update_fields=["status"])
+
+    return Response(
+        {"success": True},
+        status=status.HTTP_200_OK,
     )

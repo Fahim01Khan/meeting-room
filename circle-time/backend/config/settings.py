@@ -150,6 +150,18 @@ CHECKIN_WINDOW_MINUTES = int(os.environ.get("CHECKIN_WINDOW_MINUTES", "15"))
 PSEUDONYMIZE_AFTER_DAYS = int(os.environ.get("PSEUDONYMIZE_AFTER_DAYS", "30"))
 
 # ---------------------------------------------------------------------------
+# Email (SendGrid SMTP relay)
+# ---------------------------------------------------------------------------
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = "smtp.sendgrid.net"
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = "apikey"
+EMAIL_HOST_PASSWORD = os.environ.get("SENDGRID_API_KEY", "")
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "noreply@circletime.io")
+FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:5173")
+
+# ---------------------------------------------------------------------------
 # Fixture directories
 # ---------------------------------------------------------------------------
 FIXTURE_DIRS = [BASE_DIR / "fixtures"]
