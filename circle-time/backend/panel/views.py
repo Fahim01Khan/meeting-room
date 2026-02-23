@@ -149,8 +149,10 @@ def meeting_checkin(request, meeting_id):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
+    from organisation.models import OrganisationSettings
+    org_settings = OrganisationSettings.get()
     now = timezone.now()
-    window = getattr(django_settings, "CHECKIN_WINDOW_MINUTES", 15)
+    window = org_settings.checkin_window_minutes
     window_end = booking.start_time + timedelta(minutes=window)
     if now > window_end:
         return Response(

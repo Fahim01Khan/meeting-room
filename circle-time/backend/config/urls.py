@@ -18,4 +18,5 @@ urlpatterns = [
     path("api/", include("bookings.urls")),
     path("api/", include("panel.urls")),
     path("api/analytics/", include("analytics.urls")),
+    path("api/", include("organisation.urls")),
 ]

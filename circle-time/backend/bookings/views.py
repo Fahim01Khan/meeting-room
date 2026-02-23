@@ -580,9 +580,10 @@ def checkin_booking(request, booking_id):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    from django.conf import settings as s
+    from organisation.models import OrganisationSettings
+    org_settings = OrganisationSettings.get()
     now = timezone.now()
-    window_minutes = getattr(s, "CHECKIN_WINDOW_MINUTES", 15)
+    window_minutes = org_settings.checkin_window_minutes
 
     # Check-in is valid from start_time up to start_time + window
     from datetime import timedelta
