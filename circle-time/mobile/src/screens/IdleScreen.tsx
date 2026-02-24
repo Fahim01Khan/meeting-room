@@ -2,8 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { View, Text, Image, StyleSheet, useWindowDimensions } from 'react-native';
-import { colors, typography, spacing, borderRadius, shadows } from '../styles/theme';
-import { StatusIndicator } from '../components/StatusIndicator';
+import { colors, typography, spacing, borderRadius } from '../styles/theme';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { useRoomState } from '../context/RoomStateContext';
 
@@ -73,79 +72,76 @@ export const IdleScreen: React.FC = () => {
   }
 
   const timeUntilNext = getTimeUntilNextMeeting();
-  const bgColor = roomState.status === 'available' ? colors.successLight : colors.background;
+  const accent = primaryColour || colors.primary;
 
-  // Shared next meeting card rendered in both layouts
-  const nextMeetingCard = roomState.nextMeeting ? (
-    <View style={styles.nextMeetingCard}>
-      <Text style={styles.nextMeetingLabel}>NEXT MEETING</Text>
-      <Text style={styles.nextMeetingTitle}>{roomState.nextMeeting.title}</Text>
-      <Text style={styles.nextMeetingTime}>
-        {formatMeetingTime(roomState.nextMeeting.startTime)} –{' '}
-        {formatMeetingTime(roomState.nextMeeting.endTime)}
-      </Text>
-      <Text style={styles.nextMeetingOrganizer}>
-        {roomState.nextMeeting.organizer}
-      </Text>
-      {timeUntilNext && (
-        <View style={styles.timeUntilBadge}>
-          <Text style={styles.timeUntilText}>Starts {timeUntilNext}</Text>
-        </View>
-      )}
+  // ─── Next‑meeting row (shared) ──────────────────────────────────────────
+  const nextMeetingRow = roomState.nextMeeting ? (
+    <View style={styles.nextMeetingRow}>
+      <View style={[styles.nextMeetingDot, { backgroundColor: colors.warning }]} />
+      <View style={styles.nextMeetingContent}>
+        <Text style={styles.nextMeetingTitle} numberOfLines={1}>
+          {roomState.nextMeeting.title}
+        </Text>
+        <Text style={styles.nextMeetingTime}>
+          {formatMeetingTime(roomState.nextMeeting.startTime)} –{' '}
+          {formatMeetingTime(roomState.nextMeeting.endTime)}
+          {timeUntilNext ? `  ·  Starts ${timeUntilNext}` : ''}
+        </Text>
+        <Text style={styles.nextMeetingOrganizer}>
+          {roomState.nextMeeting.organizer}
+        </Text>
+      </View>
     </View>
-  ) : null;
+  ) : (
+    <Text style={styles.noUpcoming}>No upcoming events</Text>
+  );
 
-  // ─── Landscape two-column layout ────────────────────────────────────────────
+  // ─── Landscape (Fishbowl-style) ────────────────────────────────────────────
   if (isLandscape) {
     return (
-      <View style={[styles.container, { backgroundColor: bgColor }]}>
+      <View style={styles.container}>
         <View style={styles.landscapeBody}>
 
-          {/* Left column: clock + room identity */}
-          <View style={styles.landscapeLeft}>
-            {logoUrl ? (
-              <Image source={{ uri: logoUrl }} style={styles.brandLogoLandscape} resizeMode="contain" />
-            ) : (
-              <Text style={styles.brandNameLandscape}>{orgName}</Text>
-            )}
-            <Text style={styles.timeLandscape}>{formatTime(currentTime)}</Text>
-            <Text style={styles.dateLandscape}>{formatDate(currentTime)}</Text>
-            <View style={styles.landscapeDivider} />
-            <Text style={styles.roomNameLandscape}>{roomState.room.name}</Text>
-            <Text style={styles.roomLocationLandscape}>
-              {roomState.room.building} · Floor {roomState.room.floor}
-            </Text>
-            <View style={styles.statusContainerLandscape}>
-              <StatusIndicator status={roomState.status} size="large" />
+          {/* Left column — clock, giant status word, book button */}
+          <View style={styles.leftCol}>
+            <View>
+              <Text style={[styles.clock, { color: accent }]}>{formatTime(currentTime)}</Text>
+              <Text style={[styles.date, { color: accent }]}>{formatDate(currentTime)}</Text>
             </View>
-            <View style={styles.capacityBadgeLandscape}>
+
+            <Text style={[styles.heroStatus, { color: accent }]}>available</Text>
+
+            {roomState.status === 'available' && (
+              <PrimaryButton
+                title="Book Now"
+                onPress={() => setCurrentScreen('adHocBooking')}
+                variant="primary"
+                size="large"
+                style={styles.bookBtn}
+              />
+            )}
+          </View>
+
+          {/* Right column — logo / room info / upcoming */}
+          <View style={styles.rightCol}>
+            <View style={styles.rightTop}>
+              {logoUrl ? (
+                <Image source={{ uri: logoUrl }} style={styles.logo} resizeMode="contain" />
+              ) : (
+                <Text style={styles.orgName}>{orgName}</Text>
+              )}
+              <Text style={styles.roomName}>{roomState.room.name}</Text>
+              <Text style={styles.roomLocation}>
+                {roomState.room.building} · Floor {roomState.room.floor}
+              </Text>
               <Text style={styles.capacityText}>
                 Capacity: {roomState.room.capacity} people
               </Text>
             </View>
-          </View>
 
-          {/* Right column: next meeting (top) + action + footer (bottom) */}
-          <View style={styles.landscapeRight}>
-            {/* top slot — empty view keeps space-between working when no meeting */}
-            {nextMeetingCard ?? <View />}
-
-            <View style={styles.landscapeBottom}>
-              {roomState.status === 'available' && (
-                <PrimaryButton
-                  title="Book Now"
-                  onPress={() => setCurrentScreen('adHocBooking')}
-                  variant="primary"
-                  size="large"
-                  fullWidth
-                  style={{ backgroundColor: primaryColour }}
-                />
-              )}
-              <View style={styles.footer}>
-                <Text style={styles.footerText}>
-                  Tap to interact · Auto-refreshes every 30 seconds
-                </Text>
-              </View>
+            <View style={styles.rightBottom}>
+              <Text style={styles.sectionLabel}>NEXT MEETING</Text>
+              {nextMeetingRow}
             </View>
           </View>
 
@@ -156,53 +152,49 @@ export const IdleScreen: React.FC = () => {
 
   // ─── Portrait fallback ───────────────────────────────────────────────────────
   return (
-    <View style={[styles.container, styles.portraitContainer, { backgroundColor: bgColor }]}>
+    <View style={[styles.container, styles.portraitWrap]}>
       {/* Branding */}
-      <View style={styles.brandingHeader}>
+      <View style={styles.portraitHeader}>
         {logoUrl ? (
-          <Image source={{ uri: logoUrl }} style={styles.brandLogo} resizeMode="contain" />
+          <Image source={{ uri: logoUrl }} style={styles.logoPortrait} resizeMode="contain" />
         ) : (
-          <Text style={styles.brandName}>{orgName}</Text>
+          <Text style={styles.orgName}>{orgName}</Text>
         )}
+        <Text style={styles.roomNamePortrait}>{roomState.room.name}</Text>
       </View>
 
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.time}>{formatTime(currentTime)}</Text>
-        <Text style={styles.date}>{formatDate(currentTime)}</Text>
+      {/* Clock + hero status */}
+      <View style={styles.portraitCenter}>
+        <Text style={[styles.clock, { color: accent }]}>{formatTime(currentTime)}</Text>
+        <Text style={[styles.date, { color: accent }]}>{formatDate(currentTime)}</Text>
+        <Text style={[styles.heroStatusPortrait, { color: accent }]}>available</Text>
       </View>
 
-      {/* Room Info */}
-      <View style={styles.roomInfo}>
-        <Text style={styles.roomName}>{roomState.room.name}</Text>
+      {/* Room meta */}
+      <View style={styles.portraitMeta}>
         <Text style={styles.roomLocation}>
           {roomState.room.building} · Floor {roomState.room.floor}
         </Text>
-        <View style={styles.statusContainer}>
-          <StatusIndicator status={roomState.status} size="large" />
-        </View>
-      </View>
-
-      {/* Capacity */}
-      <View style={styles.capacityBadge}>
         <Text style={styles.capacityText}>
           Capacity: {roomState.room.capacity} people
         </Text>
       </View>
 
-      {/* Next Meeting */}
-      {nextMeetingCard}
+      {/* Upcoming */}
+      <View style={styles.portraitUpcoming}>
+        <Text style={styles.sectionLabel}>NEXT MEETING</Text>
+        {nextMeetingRow}
+      </View>
 
-      {/* Quick Book Button (if available) */}
+      {/* Book Now */}
       {roomState.status === 'available' && (
-        <View style={styles.actionContainer}>
+        <View style={styles.portraitAction}>
           <PrimaryButton
             title="Book Now"
             onPress={() => setCurrentScreen('adHocBooking')}
             variant="primary"
             size="large"
             fullWidth
-            style={{ backgroundColor: primaryColour }}
           />
         </View>
       )}
@@ -217,14 +209,13 @@ export const IdleScreen: React.FC = () => {
   );
 };
 
+// ─────────────────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  // ── Core ──────────────────────────────────────────────────────────────────────
+  /* ── Core ─────────────────────────────────────────────────────────────── */
   container: {
     flex: 1,
+    backgroundColor: colors.background,
     padding: spacing.xl,
-  },
-  portraitContainer: {
-    justifyContent: 'space-between',
   },
   loadingText: {
     fontSize: typography.fontSize.xl,
@@ -232,194 +223,133 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-  // ── Branding ──────────────────────────────────────────────────────────────────
-  brandingHeader: {
-    alignItems: 'center',
-    marginBottom: spacing.sm,
-  },
-  brandLogo: {
-    height: 48,
-    width: 160,
-    marginBottom: spacing.xs,
-  },
-  brandName: {
-    fontSize: typography.fontSize.xl,
-    fontWeight: typography.fontWeight.bold,
-    color: colors.textSecondary,
-  },
-  brandLogoLandscape: {
-    height: 40,
-    width: 140,
-    marginBottom: spacing.sm,
-  },
-  brandNameLandscape: {
-    fontSize: typography.fontSize.lg,
-    fontWeight: typography.fontWeight.bold,
-    color: colors.textSecondary,
-    marginBottom: spacing.sm,
-  },
+  /* ── Landscape ────────────────────────────────────────────────────────── */
+  landscapeBody: { flex: 1, flexDirection: 'row' },
 
-  // ── Landscape layout ──────────────────────────────────────────────────────────
-  landscapeBody: {
+  leftCol: {
     flex: 1,
-    flexDirection: 'row',
-    gap: spacing.xl,
-  },
-  landscapeLeft: {
-    flex: 2,
-    justifyContent: 'center',
-  },
-  landscapeRight: {
-    flex: 3,
     justifyContent: 'space-between',
+    paddingRight: spacing.xl,
   },
-  landscapeBottom: {
-    gap: spacing.md,
-  },
-  timeLandscape: {
-    fontSize: typography.fontSize.xxxl,
-    fontWeight: typography.fontWeight.bold,
-    color: colors.text,
-  },
-  dateLandscape: {
-    fontSize: typography.fontSize.lg,
-    color: colors.textSecondary,
-    marginTop: spacing.xs,
-  },
-  landscapeDivider: {
-    height: 2,
-    backgroundColor: colors.border,
-    marginVertical: spacing.md,
-  },
-  roomNameLandscape: {
-    fontSize: typography.fontSize.xxl,
-    fontWeight: typography.fontWeight.bold,
-    color: colors.text,
-  },
-  roomLocationLandscape: {
-    fontSize: typography.fontSize.lg,
-    color: colors.textSecondary,
-    marginTop: spacing.xs,
-  },
-  statusContainerLandscape: {
-    marginTop: spacing.md,
-    alignSelf: 'flex-start',
-  },
-  capacityBadgeLandscape: {
-    alignSelf: 'flex-start',
-    backgroundColor: colors.backgroundSecondary,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.xs,
-    borderRadius: borderRadius.full,
-    marginTop: spacing.md,
-  },
-
-  // ── Portrait header ───────────────────────────────────────────────────────────
-  header: {
-    alignItems: 'center',
-    paddingVertical: spacing.sm,
-  },
-  time: {
-    fontSize: typography.fontSize.display,
-    fontWeight: typography.fontWeight.bold,
-    color: colors.text,
+  clock: {
+    fontSize: typography.fontSize.xl,
+    fontWeight: typography.fontWeight.light,
   },
   date: {
-    fontSize: typography.fontSize.xl,
+    fontSize: typography.fontSize.lg,
+    fontWeight: typography.fontWeight.light,
+    marginTop: 4,
+  },
+  heroStatus: {
+    fontSize: typography.fontSize.hero,
+    fontWeight: typography.fontWeight.light,
+  },
+  bookBtn: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: spacing.xxl,
+  },
+
+  rightCol: {
+    flex: 1,
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    paddingLeft: spacing.xl,
+    borderLeftWidth: 1,
+    borderLeftColor: colors.border,
+  },
+  rightTop: { alignItems: 'flex-end' },
+  logo: { height: 56, width: 180, marginBottom: spacing.md },
+  orgName: {
+    fontSize: typography.fontSize.lg,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.textSecondary,
+    marginBottom: spacing.sm,
+  },
+  roomName: {
+    fontSize: typography.fontSize.xxl,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.text,
+    textTransform: 'uppercase',
+    letterSpacing: 2,
+  },
+  roomLocation: {
+    fontSize: typography.fontSize.base,
     color: colors.textSecondary,
     marginTop: spacing.xs,
   },
-
-  // ── Portrait room info ────────────────────────────────────────────────────────
-  roomInfo: {
-    alignItems: 'center',
-    paddingVertical: spacing.md,
-  },
-  roomName: {
-    fontSize: typography.fontSize.xxxl,
-    fontWeight: typography.fontWeight.bold,
-    color: colors.text,
-    textAlign: 'center',
-  },
-  roomLocation: {
-    fontSize: typography.fontSize.xl,
-    color: colors.textSecondary,
-    marginTop: spacing.sm,
-  },
-  statusContainer: {
-    marginTop: spacing.lg,
-  },
-
-  // ── Shared: capacity badge ────────────────────────────────────────────────────
-  capacityBadge: {
-    alignSelf: 'center',
-    backgroundColor: colors.backgroundSecondary,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.xs,
-    borderRadius: borderRadius.full,
-  },
   capacityText: {
-    fontSize: typography.fontSize.lg,
-    color: colors.textSecondary,
-  },
-
-  // ── Shared: next meeting card ─────────────────────────────────────────────────
-  nextMeetingCard: {
-    backgroundColor: colors.background,
-    borderRadius: borderRadius.xl,
-    padding: spacing.lg,
-    ...shadows.md,
-  },
-  nextMeetingLabel: {
     fontSize: typography.fontSize.sm,
+    color: colors.textMuted,
+    marginTop: spacing.xs,
+  },
+  rightBottom: { alignSelf: 'stretch' },
+
+  sectionLabel: {
+    fontSize: typography.fontSize.xs,
     fontWeight: typography.fontWeight.semibold,
     color: colors.textMuted,
-    letterSpacing: 1,
+    letterSpacing: 2,
     marginBottom: spacing.sm,
   },
+  nextMeetingRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: colors.backgroundSecondary,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+  },
+  nextMeetingDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginTop: 8,
+    marginRight: spacing.sm,
+  },
+  nextMeetingContent: { flex: 1 },
   nextMeetingTitle: {
-    fontSize: typography.fontSize.xxl,
+    fontSize: typography.fontSize.lg,
     fontWeight: typography.fontWeight.semibold,
     color: colors.text,
-    marginBottom: spacing.sm,
+    marginBottom: 4,
   },
   nextMeetingTime: {
-    fontSize: typography.fontSize.lg,
+    fontSize: typography.fontSize.base,
     color: colors.textSecondary,
-    marginBottom: spacing.xs,
+    marginBottom: 2,
   },
   nextMeetingOrganizer: {
-    fontSize: typography.fontSize.base,
-    color: colors.textMuted,
-  },
-  timeUntilBadge: {
-    marginTop: spacing.md,
-    backgroundColor: colors.warningLight,
-    alignSelf: 'flex-start',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: borderRadius.full,
-  },
-  timeUntilText: {
-    fontSize: typography.fontSize.base,
-    fontWeight: typography.fontWeight.medium,
-    color: colors.warning,
-  },
-
-  // ── Portrait action ───────────────────────────────────────────────────────────
-  actionContainer: {
-    paddingVertical: spacing.xs,
-  },
-
-  // ── Shared: footer ────────────────────────────────────────────────────────────
-  footer: {
-    alignItems: 'center',
-    paddingVertical: spacing.md,
-  },
-  footerText: {
     fontSize: typography.fontSize.sm,
     color: colors.textMuted,
   },
+  noUpcoming: {
+    fontSize: typography.fontSize.base,
+    color: colors.textMuted,
+    fontStyle: 'italic',
+  },
+
+  /* ── Portrait ─────────────────────────────────────────────────────────── */
+  portraitWrap: { justifyContent: 'space-between' },
+  portraitHeader: { alignItems: 'center', marginBottom: spacing.lg },
+  logoPortrait: { height: 48, width: 160, marginBottom: spacing.sm },
+  roomNamePortrait: {
+    fontSize: typography.fontSize.xl,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.text,
+    textTransform: 'uppercase',
+    letterSpacing: 2,
+  },
+  portraitCenter: { alignItems: 'center', flex: 1, justifyContent: 'center' },
+  heroStatusPortrait: {
+    fontSize: typography.fontSize.display,
+    fontWeight: typography.fontWeight.light,
+    marginTop: spacing.md,
+  },
+  portraitMeta: { alignItems: 'center', marginBottom: spacing.md },
+  portraitUpcoming: { marginBottom: spacing.md },
+  portraitAction: { marginBottom: spacing.md },
+
+  footer: { alignItems: 'center', paddingVertical: spacing.sm },
+  footerText: { fontSize: typography.fontSize.sm, color: colors.textMuted },
 });
 
 export default IdleScreen;

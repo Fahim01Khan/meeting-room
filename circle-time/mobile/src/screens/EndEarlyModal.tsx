@@ -41,71 +41,65 @@ export const EndEarlyModal: React.FC<EndEarlyModalProps> = ({ visible, onClose }
   return (
     <View style={styles.overlay}>
       <View style={styles.modal}>
-          {/* Header row: icon + title */}
-          <View style={styles.headerRow}>
-            <View style={styles.iconCircle}>
-              <Text style={styles.iconText}>⏹</Text>
-            </View>
-            <Text style={styles.title}>End Meeting Early?</Text>
-          </View>
+        {/* Title */}
+        <Text style={styles.title}>End Meeting Early?</Text>
 
-          {/* Meeting Info */}
-          {roomState?.currentMeeting && (
-            <View style={styles.meetingInfo}>
-              <Text style={styles.meetingTitle} numberOfLines={1}>
-                {roomState.currentMeeting.title}
-              </Text>
-              <Text style={styles.meetingOrganizer} numberOfLines={1}>
-                {roomState.currentMeeting.organizer}
-              </Text>
-            </View>
-          )}
-
-          {/* Time Saved */}
-          <View style={styles.timeSavedContainer}>
-            <Text style={styles.timeSavedLabel}>This will free up</Text>
-            <Text style={styles.timeSavedValue}>{timeSaved} min</Text>
-            <Text style={styles.timeSavedSubtext}>
-              Room becomes immediately available
+        {/* Meeting Info */}
+        {roomState?.currentMeeting && (
+          <View style={styles.meetingInfo}>
+            <Text style={styles.meetingTitle} numberOfLines={1}>
+              {roomState.currentMeeting.title}
+            </Text>
+            <Text style={styles.meetingOrganizer} numberOfLines={1}>
+              {roomState.currentMeeting.organizer}
             </Text>
           </View>
+        )}
 
-          {/* Error */}
-          {error && (
-            <View style={styles.errorContainer}>
-              <Text style={styles.errorText}>{error}</Text>
-            </View>
-          )}
-
-          {/* Actions — side by side */}
-          <View style={styles.actions}>
-            <View style={styles.actionButton}>
-              <PrimaryButton
-                title="End Meeting"
-                onPress={onConfirm}
-                variant="danger"
-                size="medium"
-                fullWidth
-                loading={isLoading}
-              />
-            </View>
-            <View style={styles.actionButton}>
-              <PrimaryButton
-                title="Cancel"
-                onPress={onClose}
-                variant="outline"
-                size="medium"
-                fullWidth
-                disabled={isLoading}
-              />
-            </View>
-          </View>
-
-          {/* Disclaimer */}
-          <Text style={styles.disclaimerText}>
-            The meeting organizer will be notified via email
+        {/* Time Saved */}
+        <View style={styles.timeSavedContainer}>
+          <Text style={styles.timeSavedLabel}>This will free up</Text>
+          <Text style={styles.timeSavedValue}>{timeSaved} min</Text>
+          <Text style={styles.timeSavedSubtext}>
+            Room becomes immediately available
           </Text>
+        </View>
 
+        {/* Error */}
+        {error && (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        )}
+
+        {/* Actions — side by side */}
+        <View style={styles.actions}>
+          <View style={styles.actionButton}>
+            <PrimaryButton
+              title="End Meeting"
+              onPress={onConfirm}
+              variant="danger"
+              size="medium"
+              fullWidth
+              loading={isLoading}
+            />
+          </View>
+          <View style={styles.actionButton}>
+            <PrimaryButton
+              title="Cancel"
+              onPress={onClose}
+              variant="outline"
+              size="medium"
+              fullWidth
+              disabled={isLoading}
+            />
+          </View>
+        </View>
+
+        {/* Disclaimer */}
+        <Text style={styles.disclaimerText}>
+          The meeting organizer will be notified via email
+        </Text>
       </View>
     </View>
   );
@@ -123,52 +117,39 @@ export const EndEarlyScreen: React.FC = () => {
   );
 };
 
+// ─────────────────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: spacing.md,
+    padding: spacing.xl,
   },
   modal: {
     backgroundColor: colors.background,
     borderRadius: borderRadius.xl,
-    padding: spacing.lg,
+    paddingVertical: spacing.xl,
+    paddingHorizontal: spacing.xl,
     width: '90%',
-    maxWidth: 680,
+    maxWidth: 720,
+    alignItems: 'center',
     ...shadows.lg,
   },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.sm,
-    gap: spacing.sm,
-  },
-  iconCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: colors.errorLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  iconText: {
-    fontSize: 22,
-  },
   title: {
-    fontSize: typography.fontSize.lg,
-    fontWeight: typography.fontWeight.bold,
+    fontSize: typography.fontSize.xxl,
+    fontWeight: typography.fontWeight.light,
     color: colors.text,
+    marginBottom: spacing.md,
   },
   meetingInfo: {
     backgroundColor: colors.backgroundSecondary,
     borderRadius: borderRadius.lg,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
-    marginBottom: spacing.sm,
+    marginBottom: spacing.md,
     alignItems: 'center',
+    alignSelf: 'stretch',
   },
   meetingTitle: {
     fontSize: typography.fontSize.lg,
@@ -183,7 +164,7 @@ const styles = StyleSheet.create({
   },
   timeSavedContainer: {
     alignItems: 'center',
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.md,
     marginBottom: spacing.sm,
   },
   timeSavedLabel: {
@@ -192,8 +173,8 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   timeSavedValue: {
-    fontSize: typography.fontSize.xxl,
-    fontWeight: typography.fontWeight.bold,
+    fontSize: typography.fontSize.xxxl,
+    fontWeight: typography.fontWeight.light,
     color: colors.success,
     marginBottom: spacing.xs,
   },
@@ -207,6 +188,7 @@ const styles = StyleSheet.create({
     padding: spacing.sm,
     borderRadius: borderRadius.md,
     marginBottom: spacing.sm,
+    alignSelf: 'stretch',
   },
   errorText: {
     color: colors.error,
@@ -216,8 +198,9 @@ const styles = StyleSheet.create({
   actions: {
     flexDirection: 'row',
     alignItems: 'stretch',
-    gap: spacing.sm,
-    marginBottom: spacing.xs,
+    gap: spacing.md,
+    alignSelf: 'stretch',
+    marginBottom: spacing.sm,
   },
   actionButton: {
     flex: 1,

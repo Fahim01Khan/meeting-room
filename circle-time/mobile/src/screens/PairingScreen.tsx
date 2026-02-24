@@ -107,13 +107,14 @@ export const PairingScreen: React.FC<PairingScreenProps> = ({ onPaired }) => {
   // ── Render ─────────────────────────────────────────────────────────────
   return (
     <View style={styles.container}>
-      <View style={styles.card}>
-        {/* Logo / Title */}
+      {/* Title area */}
+      <View style={styles.header}>
         <Text style={styles.title}>Circle Time</Text>
         <Text style={styles.subtitle}>Meeting Room Display</Text>
+      </View>
 
-        <View style={styles.divider} />
-
+      {/* Center content */}
+      <View style={styles.center}>
         {status === 'loading' && (
           <>
             <ActivityIndicator size="large" color={colors.primary} />
@@ -125,7 +126,7 @@ export const PairingScreen: React.FC<PairingScreenProps> = ({ onPaired }) => {
           <>
             <Text style={styles.label}>Enter this code on the admin dashboard</Text>
             <Text style={styles.code}>
-              {code.slice(0, 3)} {code.slice(3)}
+              {code.split('').join(' ')}
             </Text>
             <Text style={styles.timer}>Expires in {formatTime(secondsLeft)}</Text>
             <Text style={styles.hint}>
@@ -163,56 +164,46 @@ export const PairingScreen: React.FC<PairingScreenProps> = ({ onPaired }) => {
   );
 };
 
+// ─────────────────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.backgroundSecondary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  card: {
     backgroundColor: colors.background,
-    borderRadius: borderRadius.xl,
-    paddingVertical: spacing.xxl,
-    paddingHorizontal: spacing.xl,
+    padding: spacing.xl,
+    justifyContent: 'space-between',
+  },
+  header: {
     alignItems: 'center',
-    width: '80%',
-    maxWidth: 600,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 4,
+    paddingTop: spacing.xxl,
   },
   title: {
     fontSize: typography.fontSize.xxl,
-    fontWeight: typography.fontWeight.bold,
+    fontWeight: typography.fontWeight.light,
     color: colors.primary,
     marginBottom: spacing.xs,
   },
   subtitle: {
     fontSize: typography.fontSize.lg,
-    fontWeight: typography.fontWeight.medium,
+    fontWeight: typography.fontWeight.light,
     color: colors.textSecondary,
   },
-  divider: {
-    width: '60%',
-    height: 1,
-    backgroundColor: colors.border,
-    marginVertical: spacing.lg,
+  center: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   label: {
     fontSize: typography.fontSize.base,
     color: colors.textSecondary,
-    marginBottom: spacing.md,
+    marginBottom: spacing.lg,
     textAlign: 'center',
   },
   code: {
     fontSize: typography.fontSize.display,
-    fontWeight: typography.fontWeight.bold,
+    fontWeight: typography.fontWeight.light,
     color: colors.text,
-    letterSpacing: 16,
-    marginBottom: spacing.md,
+    letterSpacing: 12,
+    marginBottom: spacing.lg,
   },
   timer: {
     fontSize: typography.fontSize.lg,
@@ -227,13 +218,13 @@ const styles = StyleSheet.create({
   },
   expiredLabel: {
     fontSize: typography.fontSize.xl,
-    fontWeight: typography.fontWeight.semibold,
+    fontWeight: typography.fontWeight.light,
     color: colors.warning,
     marginBottom: spacing.sm,
   },
   errorLabel: {
     fontSize: typography.fontSize.xl,
-    fontWeight: typography.fontWeight.semibold,
+    fontWeight: typography.fontWeight.light,
     color: colors.error,
     marginBottom: spacing.sm,
   },

@@ -2,8 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, useWindowDimensions } from 'react-native';
-import { colors, typography, spacing, borderRadius, shadows } from '../styles/theme';
-import { StatusIndicator } from '../components/StatusIndicator';
+import { colors, typography, spacing, borderRadius } from '../styles/theme';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { useRoomState } from '../context/RoomStateContext';
 
@@ -80,71 +79,73 @@ export const MeetingScreen: React.FC = () => {
   const meeting = roomState.currentMeeting;
   const progress = getProgress();
   const isEnding = progress > 0.9;
+  const statusColor = isEnding ? colors.warning : colors.error;
 
-  // ─── Landscape two-column layout ────────────────────────────────────────────
+  // ─── Landscape (Fishbowl-style) ────────────────────────────────────────────
   if (isLandscape) {
     return (
-      <View style={[styles.container, { backgroundColor: isEnding ? colors.warningLight : colors.errorLight }]}>
-        {/* Full-width header */}
-        <View style={styles.header}>
-          <StatusIndicator status="occupied" size="large" />
-          <Text style={styles.roomName}>{roomState.room.name}</Text>
-        </View>
-
-        {/* Two-column body */}
+      <View style={styles.container}>
         <View style={styles.landscapeBody}>
-          {/* Left column: meeting info + progress */}
-          <View style={styles.landscapeLeft}>
-            <Text style={styles.meetingTitleLandscape}>{meeting.title}</Text>
-            <Text style={styles.meetingOrganizerLandscape}>
-              Organized by {meeting.organizer}
-            </Text>
-            <Text style={styles.meetingTimeLandscape}>
-              {formatTime(meeting.startTime)} - {formatTime(meeting.endTime)}
-            </Text>
 
-            <View style={styles.progressContainerLandscape}>
+          {/* Left — giant status + countdown */}
+          <View style={styles.leftCol}>
+            <View>
+              <Text style={[styles.clock, { color: statusColor }]}>
+                {formatTime(meeting.startTime)} - {formatTime(meeting.endTime)}
+              </Text>
+            </View>
+
+            <View>
+              <Text style={[styles.heroStatus, { color: statusColor }]}>occupied</Text>
+              <Text style={[styles.countdown, { color: statusColor }]}>{timeRemaining}</Text>
               <View style={styles.progressBar}>
                 <View
                   style={[
                     styles.progressFill,
-                    {
-                      width: `${progress * 100}%`,
-                      backgroundColor: isEnding ? colors.warning : colors.error,
-                    },
+                    { width: `${progress * 100}%`, backgroundColor: statusColor },
                   ]}
                 />
               </View>
-              <Text style={[styles.timeRemainingLandscape, { color: isEnding ? colors.warning : colors.error }]}>
-                {timeRemaining}
-              </Text>
             </View>
+
+            <PrimaryButton
+              title="End Meeting Early"
+              onPress={() => setCurrentScreen('endEarly')}
+              variant="primary"
+              size="large"
+              style={styles.actionBtn}
+            />
           </View>
 
-          {/* Right column: attendees + badges + action */}
-          <View style={styles.landscapeRight}>
-            <View>
-              <View style={styles.attendeesCardLandscape}>
-                <Text style={styles.attendeesLabel}>
-                  {meeting.attendeeCount > 0 ? 'ATTENDEES' : 'BOOKING TYPE'}
-                </Text>
-                <View style={styles.attendeesRow}>
-                  <View style={styles.attendeesIcon}>
-                    <Text style={styles.attendeesIconText}>
-                      {meeting.attendeeCount > 0 ? meeting.attendeeCount : '⚡'}
-                    </Text>
-                  </View>
-                  <Text style={styles.attendeesText}>
-                    {meeting.attendeeCount > 0
-                      ? `${meeting.attendeeCount} ${meeting.attendeeCount === 1 ? 'person' : 'people'} expected`
-                      : 'Walk-in booking'}
+          {/* Right — meeting details */}
+          <View style={styles.rightCol}>
+            <View style={styles.rightTop}>
+              <Text style={styles.roomName}>{roomState.room.name}</Text>
+            </View>
+
+            <View style={styles.meetingDetails}>
+              <Text style={styles.meetingTitle}>{meeting.title}</Text>
+              <Text style={styles.meetingOrganizer}>
+                Organized by {meeting.organizer}
+              </Text>
+
+              {/* Attendees */}
+              <View style={styles.metaRow}>
+                <View style={styles.metaIcon}>
+                  <Text style={styles.metaIconText}>
+                    {meeting.attendeeCount > 0 ? meeting.attendeeCount : '⚡'}
                   </Text>
                 </View>
+                <Text style={styles.metaText}>
+                  {meeting.attendeeCount > 0
+                    ? `${meeting.attendeeCount} ${meeting.attendeeCount === 1 ? 'person' : 'people'} expected`
+                    : 'Walk-in booking'}
+                </Text>
               </View>
 
               {/* Check-in Status */}
               {meeting.checkedIn && (
-                <View style={styles.checkedInBadgeLandscape}>
+                <View style={styles.checkedInRow}>
                   <Text style={styles.checkedInText}>✓ Checked In</Text>
                   {meeting.checkedInAt && (
                     <Text style={styles.checkedInTime}>
@@ -153,29 +154,19 @@ export const MeetingScreen: React.FC = () => {
                   )}
                 </View>
               )}
-
-              {/* Next Meeting Warning */}
-              {roomState.nextMeeting && (
-                <View style={styles.nextMeetingWarningLandscape}>
-                  <Text style={styles.nextMeetingText}>
-                    Next: {roomState.nextMeeting.title} at{' '}
-                    {formatTime(roomState.nextMeeting.startTime)}
-                  </Text>
-                </View>
-              )}
             </View>
 
-            {/* Action pinned at bottom of right column */}
-            <View style={styles.actionsLandscape}>
-              <PrimaryButton
-                title="End Meeting Early"
-                onPress={() => setCurrentScreen('endEarly')}
-                variant="outline"
-                size="large"
-                fullWidth
-              />
-            </View>
+            {/* Next Meeting Warning */}
+            {roomState.nextMeeting && (
+              <View style={styles.nextWarning}>
+                <Text style={styles.nextWarningText}>
+                  Next: {roomState.nextMeeting.title} at{' '}
+                  {formatTime(roomState.nextMeeting.startTime)}
+                </Text>
+              </View>
+            )}
           </View>
+
         </View>
       </View>
     );
@@ -183,81 +174,67 @@ export const MeetingScreen: React.FC = () => {
 
   // ─── Portrait fallback ───────────────────────────────────────────────────────
   return (
-    <View style={[styles.container, { backgroundColor: isEnding ? colors.warningLight : colors.errorLight }]}>
-      {/* Header */}
-      <View style={styles.header}>
-        <StatusIndicator status="occupied" size="large" />
-        <Text style={styles.roomName}>{roomState.room.name}</Text>
-      </View>
+    <View style={[styles.container, styles.portraitWrap]}>
+      {/* Room name */}
+      <Text style={styles.roomNamePortrait}>{roomState.room.name}</Text>
 
-      {/* Meeting Info */}
-      <View style={styles.meetingInfo}>
-        <Text style={styles.meetingTitle}>{meeting.title}</Text>
-        <Text style={styles.meetingOrganizer}>
-          Organized by {meeting.organizer}
-        </Text>
-        <View style={styles.timeRow}>
-          <Text style={styles.meetingTime}>
-            {formatTime(meeting.startTime)} - {formatTime(meeting.endTime)}
-          </Text>
-        </View>
-      </View>
-
-      {/* Progress Bar */}
-      <View style={styles.progressContainer}>
+      {/* Hero status + countdown */}
+      <View style={styles.portraitCenter}>
+        <Text style={[styles.heroStatusPortrait, { color: statusColor }]}>occupied</Text>
+        <Text style={[styles.countdownPortrait, { color: statusColor }]}>{timeRemaining}</Text>
         <View style={styles.progressBar}>
           <View
             style={[
               styles.progressFill,
-              {
-                width: `${progress * 100}%`,
-                backgroundColor: isEnding ? colors.warning : colors.error,
-              },
+              { width: `${progress * 100}%`, backgroundColor: statusColor },
             ]}
           />
         </View>
-        <Text style={[styles.timeRemaining, { color: isEnding ? colors.warning : colors.error }]}>
-          {timeRemaining}
-        </Text>
       </View>
 
-      {/* Attendees */}
-      <View style={styles.attendeesCard}>
-        <Text style={styles.attendeesLabel}>
-          {meeting.attendeeCount > 0 ? 'ATTENDEES' : 'BOOKING TYPE'}
+      {/* Meeting Info */}
+      <View style={styles.meetingDetailsPortrait}>
+        <Text style={styles.meetingTitle}>{meeting.title}</Text>
+        <Text style={styles.meetingOrganizer}>
+          Organized by {meeting.organizer}
         </Text>
-        <View style={styles.attendeesRow}>
-          <View style={styles.attendeesIcon}>
-            <Text style={styles.attendeesIconText}>
+        <Text style={styles.meetingTimePortrait}>
+          {formatTime(meeting.startTime)} - {formatTime(meeting.endTime)}
+        </Text>
+
+        {/* Attendees */}
+        <View style={styles.metaRow}>
+          <View style={styles.metaIcon}>
+            <Text style={styles.metaIconText}>
               {meeting.attendeeCount > 0 ? meeting.attendeeCount : '⚡'}
             </Text>
           </View>
-          <Text style={styles.attendeesText}>
+          <Text style={styles.metaText}>
             {meeting.attendeeCount > 0
               ? `${meeting.attendeeCount} ${meeting.attendeeCount === 1 ? 'person' : 'people'} expected`
               : 'Walk-in booking'}
           </Text>
         </View>
+
+        {/* Check-in Status */}
+        {meeting.checkedIn && (
+          <View style={styles.checkedInRow}>
+            <Text style={styles.checkedInText}>✓ Checked In</Text>
+            {meeting.checkedInAt && (
+              <Text style={styles.checkedInTime}>
+                at {formatTime(meeting.checkedInAt)}
+              </Text>
+            )}
+          </View>
+        )}
       </View>
 
-      {/* Check-in Status */}
-      {meeting.checkedIn && (
-        <View style={styles.checkedInBadge}>
-          <Text style={styles.checkedInText}>✓ Checked In</Text>
-          {meeting.checkedInAt && (
-            <Text style={styles.checkedInTime}>
-              at {formatTime(meeting.checkedInAt)}
-            </Text>
-          )}
-        </View>
-      )}
-
       {/* Actions */}
-      <View style={styles.actions}>
+      <View style={styles.portraitActions}>
         <PrimaryButton
           title="End Meeting Early"
           onPress={() => setCurrentScreen('endEarly')}
-          variant="outline"
+          variant="primary"
           size="large"
           fullWidth
         />
@@ -265,8 +242,8 @@ export const MeetingScreen: React.FC = () => {
 
       {/* Next Meeting Warning */}
       {roomState.nextMeeting && (
-        <View style={styles.nextMeetingWarning}>
-          <Text style={styles.nextMeetingText}>
+        <View style={styles.nextWarning}>
+          <Text style={styles.nextWarningText}>
             Next: {roomState.nextMeeting.title} at{' '}
             {formatTime(roomState.nextMeeting.startTime)}
           </Text>
@@ -276,9 +253,12 @@ export const MeetingScreen: React.FC = () => {
   );
 };
 
+// ─────────────────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
+  /* ── Core ─────────────────────────────────────────────────────────────── */
   container: {
     flex: 1,
+    backgroundColor: colors.background,
     padding: spacing.xl,
   },
   loadingText: {
@@ -286,200 +266,164 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     textAlign: 'center',
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: spacing.sm,
-    marginBottom: spacing.xs,
-  },
-  roomName: {
-    fontSize: typography.fontSize.xl,
-    fontWeight: typography.fontWeight.semibold,
-    color: colors.text,
-  },
 
-  // ── Landscape layout ──────────────────────────────────────────────────────────
-  landscapeBody: {
+  /* ── Landscape ────────────────────────────────────────────────────────── */
+  landscapeBody: { flex: 1, flexDirection: 'row' },
+
+  leftCol: {
     flex: 1,
-    flexDirection: 'row',
-    gap: spacing.xl,
-  },
-  landscapeLeft: {
-    flex: 45,
-    justifyContent: 'center',
-  },
-  landscapeRight: {
-    flex: 55,
     justifyContent: 'space-between',
+    paddingRight: spacing.xl,
   },
-  meetingTitleLandscape: {
+  clock: {
+    fontSize: typography.fontSize.xl,
+    fontWeight: typography.fontWeight.light,
+  },
+  heroStatus: {
+    fontSize: 118,
+    fontWeight: typography.fontWeight.light,
+  },
+  countdown: {
     fontSize: typography.fontSize.xxl,
-    fontWeight: typography.fontWeight.bold,
-    color: colors.text,
-    marginBottom: spacing.sm,
-  },
-  meetingOrganizerLandscape: {
-    fontSize: typography.fontSize.lg,
-    color: colors.textSecondary,
-    marginBottom: spacing.xs,
-  },
-  meetingTimeLandscape: {
-    fontSize: typography.fontSize.xl,
-    fontWeight: typography.fontWeight.medium,
-    color: colors.text,
-    marginBottom: spacing.md,
-  },
-  progressContainerLandscape: {
-    alignItems: 'center',
-    marginTop: spacing.sm,
-  },
-  timeRemainingLandscape: {
-    marginTop: spacing.sm,
-    fontSize: typography.fontSize.xl,
-    fontWeight: typography.fontWeight.bold,
-  },
-  attendeesCardLandscape: {
-    backgroundColor: colors.background,
-    borderRadius: borderRadius.lg,
-    padding: spacing.md,
-    ...shadows.sm,
-  },
-  checkedInBadgeLandscape: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.successLight,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: borderRadius.lg,
-    marginTop: spacing.sm,
-  },
-  nextMeetingWarningLandscape: {
-    backgroundColor: colors.warningLight,
-    padding: spacing.sm,
-    borderRadius: borderRadius.md,
-    alignItems: 'center',
-    marginTop: spacing.sm,
-  },
-  actionsLandscape: {
-    paddingTop: spacing.sm,
-  },
-
-  // ── Portrait layout ───────────────────────────────────────────────────────────
-  meetingInfo: {
-    alignItems: 'center',
-    paddingVertical: spacing.md,
-  },
-  meetingTitle: {
-    fontSize: typography.fontSize.xxxl,
-    fontWeight: typography.fontWeight.bold,
-    color: colors.text,
-    textAlign: 'center',
-    marginBottom: spacing.md,
-  },
-  meetingOrganizer: {
-    fontSize: typography.fontSize.xl,
-    color: colors.textSecondary,
-    marginBottom: spacing.sm,
-  },
-  timeRow: {
-    marginTop: spacing.sm,
-  },
-  meetingTime: {
-    fontSize: typography.fontSize.xxl,
-    fontWeight: typography.fontWeight.medium,
-    color: colors.text,
-  },
-  progressContainer: {
-    paddingVertical: spacing.sm,
-    alignItems: 'center',
+    fontWeight: typography.fontWeight.light,
+    marginTop: spacing.xs,
   },
   progressBar: {
+    height: 6,
     width: '100%',
-    height: 12,
-    backgroundColor: colors.background,
+    backgroundColor: colors.border,
     borderRadius: borderRadius.full,
     overflow: 'hidden',
+    marginTop: spacing.md,
   },
   progressFill: {
     height: '100%',
     borderRadius: borderRadius.full,
   },
-  timeRemaining: {
-    marginTop: spacing.sm,
+  actionBtn: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: spacing.xxl,
+  },
+
+  rightCol: {
+    flex: 1,
+    justifyContent: 'space-between',
+    paddingLeft: spacing.xl,
+    borderLeftWidth: 1,
+    borderLeftColor: colors.border,
+  },
+  rightTop: { alignItems: 'flex-end' },
+  roomName: {
     fontSize: typography.fontSize.xxl,
     fontWeight: typography.fontWeight.bold,
+    color: colors.text,
+    textTransform: 'uppercase',
+    letterSpacing: 2,
+    textAlign: 'right',
   },
-  attendeesCard: {
-    backgroundColor: colors.background,
-    borderRadius: borderRadius.lg,
-    padding: spacing.lg,
-    marginVertical: spacing.md,
-    ...shadows.sm,
+
+  meetingDetails: {
+    gap: spacing.sm,
   },
-  attendeesLabel: {
-    fontSize: typography.fontSize.sm,
+  meetingTitle: {
+    fontSize: typography.fontSize.xl,
     fontWeight: typography.fontWeight.semibold,
-    color: colors.textMuted,
-    letterSpacing: 1,
-    marginBottom: spacing.sm,
+    color: colors.text,
   },
-  attendeesRow: {
+  meetingOrganizer: {
+    fontSize: typography.fontSize.lg,
+    color: colors.textSecondary,
+  },
+  metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginTop: spacing.xs,
   },
-  attendeesIcon: {
-    width: 48,
-    height: 48,
+  metaIcon: {
+    width: 40,
+    height: 40,
     borderRadius: borderRadius.full,
     backgroundColor: colors.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: spacing.md,
+    marginRight: spacing.sm,
   },
-  attendeesIconText: {
-    fontSize: typography.fontSize.lg,
+  metaIconText: {
+    fontSize: typography.fontSize.base,
     fontWeight: typography.fontWeight.bold,
     color: colors.primary,
   },
-  attendeesText: {
-    fontSize: typography.fontSize.lg,
+  metaText: {
+    fontSize: typography.fontSize.base,
     color: colors.text,
   },
-  checkedInBadge: {
+  checkedInRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
     backgroundColor: colors.successLight,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
     borderRadius: borderRadius.lg,
-    marginVertical: spacing.md,
+    alignSelf: 'flex-start',
   },
   checkedInText: {
-    fontSize: typography.fontSize.lg,
+    fontSize: typography.fontSize.base,
     fontWeight: typography.fontWeight.semibold,
     color: colors.success,
   },
   checkedInTime: {
-    fontSize: typography.fontSize.base,
+    fontSize: typography.fontSize.sm,
     color: colors.success,
     marginLeft: spacing.sm,
   },
-  actions: {
-    paddingVertical: spacing.md,
-  },
-  nextMeetingWarning: {
+
+  nextWarning: {
     backgroundColor: colors.warningLight,
     padding: spacing.md,
     borderRadius: borderRadius.md,
-    alignItems: 'center',
   },
-  nextMeetingText: {
+  nextWarningText: {
     fontSize: typography.fontSize.base,
     color: colors.warning,
     fontWeight: typography.fontWeight.medium,
+    textAlign: 'center',
+  },
+
+  /* ── Portrait ─────────────────────────────────────────────────────────── */
+  portraitWrap: { justifyContent: 'space-between' },
+  roomNamePortrait: {
+    fontSize: typography.fontSize.xl,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.text,
+    textTransform: 'uppercase',
+    letterSpacing: 2,
+    textAlign: 'center',
+  },
+  portraitCenter: {
+    alignItems: 'center',
+    flex: 1,
+    justifyContent: 'center',
+  },
+  heroStatusPortrait: {
+    fontSize: typography.fontSize.display,
+    fontWeight: typography.fontWeight.light,
+  },
+  countdownPortrait: {
+    fontSize: typography.fontSize.xxl,
+    fontWeight: typography.fontWeight.light,
+    marginTop: spacing.xs,
+  },
+  meetingDetailsPortrait: {
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginBottom: spacing.md,
+  },
+  meetingTimePortrait: {
+    fontSize: typography.fontSize.lg,
+    color: colors.textSecondary,
+  },
+  portraitActions: {
+    marginBottom: spacing.md,
   },
 });
 

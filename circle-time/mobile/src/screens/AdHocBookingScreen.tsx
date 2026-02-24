@@ -1,9 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, typography, spacing, borderRadius, shadows } from '../styles/theme';
+import { View, Text, StyleSheet, useWindowDimensions } from 'react-native';
+import { colors, typography, spacing, borderRadius } from '../styles/theme';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { useRoomState } from '../context/RoomStateContext';
 
@@ -18,7 +17,8 @@ export const AdHocBookingScreen: React.FC = () => {
   const { roomState, isLoading, handleAdHocBooking, setCurrentScreen } = useRoomState();
   const [activeDuration, setActiveDuration] = useState<number | null>(null);
   const [bookingError, setBookingError] = useState<string | null>(null);
-  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
 
   const onSelectDuration = async (minutes: number) => {
     setActiveDuration(minutes);
@@ -33,10 +33,75 @@ export const AdHocBookingScreen: React.FC = () => {
     // On success, context navigates to 'checkin' — no action needed here
   };
 
+  // ─── Landscape ──────────────────────────────────────────────────────────────
+  if (isLandscape) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.landscapeBody}>
+
+          {/* Left — hero prompt */}
+          <View style={styles.leftCol}>
+            <View>
+              <Text style={styles.heroStatus}>book now</Text>
+              {roomState?.room.name ? (
+                <Text style={styles.roomSubtitle}>{roomState.room.name}</Text>
+              ) : null}
+            </View>
+
+            {roomState?.room && (
+              <Text style={styles.roomMeta}>
+                {roomState.room.building} · Floor {roomState.room.floor} · Capacity {roomState.room.capacity}
+              </Text>
+            )}
+
+            <PrimaryButton
+              title="Cancel"
+              onPress={() => setCurrentScreen('idle')}
+              variant="primary"
+              size="medium"
+              style={styles.cancelBtn}
+            />
+          </View>
+
+          {/* Right — duration grid */}
+          <View style={styles.rightCol}>
+            <Text style={styles.promptText}>How long do you need the room?</Text>
+
+            <View style={styles.durationGrid}>
+              {DURATION_OPTIONS.map(({ label, minutes }) => {
+                const isActive = activeDuration === minutes;
+                return (
+                  <View key={minutes} style={styles.durationCell}>
+                    <PrimaryButton
+                      title={label}
+                      onPress={() => onSelectDuration(minutes)}
+                      variant={isActive ? 'primary' : 'outline'}
+                      size="large"
+                      fullWidth
+                      loading={isActive && isLoading}
+                    />
+                  </View>
+                );
+              })}
+            </View>
+
+            {bookingError && (
+              <View style={styles.errorContainer}>
+                <Text style={styles.errorText}>{bookingError}</Text>
+              </View>
+            )}
+          </View>
+
+        </View>
+      </View>
+    );
+  }
+
+  // ─── Portrait ───────────────────────────────────────────────────────────────
   return (
-    <View style={[styles.container, { paddingBottom: insets.bottom }]}>
+    <View style={[styles.container, styles.portraitWrap]}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={styles.portraitHeader}>
         <Text style={styles.title}>Book This Room</Text>
         {roomState?.room.name ? (
           <Text style={styles.subtitle}>{roomState.room.name}</Text>
@@ -45,8 +110,8 @@ export const AdHocBookingScreen: React.FC = () => {
 
       {/* Room meta */}
       {roomState?.room && (
-        <View style={styles.roomMeta}>
-          <Text style={styles.roomMetaText}>
+        <View style={styles.portraitMeta}>
+          <Text style={styles.roomMeta}>
             {roomState.room.building} · Floor {roomState.room.floor} · Capacity {roomState.room.capacity}
           </Text>
         </View>
@@ -60,7 +125,7 @@ export const AdHocBookingScreen: React.FC = () => {
         {DURATION_OPTIONS.map(({ label, minutes }) => {
           const isActive = activeDuration === minutes;
           return (
-            <View key={minutes} style={styles.durationButtonWrapper}>
+            <View key={minutes} style={styles.durationCell}>
               <PrimaryButton
                 title={label}
                 onPress={() => onSelectDuration(minutes)}
@@ -86,7 +151,7 @@ export const AdHocBookingScreen: React.FC = () => {
         <PrimaryButton
           title="Cancel"
           onPress={() => setCurrentScreen('idle')}
-          variant="outline"
+          variant="primary"
           size="medium"
           fullWidth
         />
@@ -95,13 +160,80 @@ export const AdHocBookingScreen: React.FC = () => {
   );
 };
 
+// ─────────────────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
+  /* ── Core ─────────────────────────────────────────────────────────────── */
   container: {
     flex: 1,
-    padding: spacing.lg,
-    justifyContent: 'center',
+    backgroundColor: colors.background,
+    padding: spacing.xl,
   },
-  header: {
+
+  /* ── Landscape ────────────────────────────────────────────────────────── */
+  landscapeBody: { flex: 1, flexDirection: 'row' },
+
+  leftCol: {
+    flex: 1,
+    justifyContent: 'space-between',
+    paddingRight: spacing.xl,
+  },
+  heroStatus: {
+    fontSize: typography.fontSize.hero,
+    fontWeight: typography.fontWeight.light,
+    color: colors.primary,
+  },
+  roomSubtitle: {
+    fontSize: typography.fontSize.xl,
+    color: colors.primary,
+    fontWeight: typography.fontWeight.semibold,
+    marginTop: spacing.xs,
+  },
+  roomMeta: {
+    fontSize: typography.fontSize.sm,
+    color: colors.textSecondary,
+  },
+  cancelBtn: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: spacing.xxl,
+  },
+
+  rightCol: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingLeft: spacing.xl,
+    borderLeftWidth: 1,
+    borderLeftColor: colors.border,
+  },
+  promptText: {
+    fontSize: typography.fontSize.lg,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: spacing.lg,
+  },
+  durationGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  durationCell: {
+    width: '48%',
+  },
+  errorContainer: {
+    backgroundColor: colors.errorLight,
+    padding: spacing.sm,
+    borderRadius: borderRadius.md,
+    marginTop: spacing.md,
+  },
+  errorText: {
+    color: colors.error,
+    fontSize: typography.fontSize.sm,
+    textAlign: 'center',
+  },
+
+  /* ── Portrait ─────────────────────────────────────────────────────────── */
+  portraitWrap: { justifyContent: 'center' },
+  portraitHeader: {
     alignItems: 'center',
     marginBottom: spacing.sm,
   },
@@ -116,43 +248,12 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontWeight: typography.fontWeight.semibold,
   },
-  roomMeta: {
+  portraitMeta: {
     alignItems: 'center',
     marginBottom: spacing.md,
   },
-  roomMetaText: {
-    fontSize: typography.fontSize.sm,
-    color: colors.textSecondary,
-  },
-  promptText: {
-    fontSize: typography.fontSize.lg,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginBottom: spacing.md,
-  },
-  durationGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    gap: spacing.sm,
-    marginBottom: spacing.md,
-  },
-  durationButtonWrapper: {
-    width: '48%',
-  },
-  errorContainer: {
-    backgroundColor: colors.errorLight,
-    padding: spacing.sm,
-    borderRadius: borderRadius.md,
-    marginBottom: spacing.sm,
-  },
-  errorText: {
-    color: colors.error,
-    fontSize: typography.fontSize.sm,
-    textAlign: 'center',
-  },
   cancelContainer: {
-    marginTop: spacing.xs,
+    marginTop: spacing.md,
   },
 });
 

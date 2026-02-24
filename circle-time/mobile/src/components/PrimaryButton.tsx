@@ -35,7 +35,6 @@ export const PrimaryButton: React.FC<PrimaryButtonProps> = ({
       ...styles.button,
       ...(size === 'large' ? styles.buttonLarge : styles.buttonMedium),
       ...(fullWidth && styles.fullWidth),
-      ...shadows.md,
     };
 
     if (disabled || loading) {
@@ -98,15 +97,15 @@ const styles = StyleSheet.create({
   button: {
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: borderRadius.lg,
+    borderRadius: borderRadius.full,
   },
   buttonLarge: {
-    paddingVertical: spacing.lg,
+    paddingVertical: spacing.md,
     paddingHorizontal: spacing.xl,
-    minHeight: 80,
+    minHeight: 72,
   },
   buttonMedium: {
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.sm,
     paddingHorizontal: spacing.lg,
     minHeight: 56,
   },

@@ -457,14 +457,11 @@ def room_state(request, room_id):
         if booking is None:
             return None
         organizer = booking.organizer
-        try:
-            attendee_count = booking.booking_attendees.count()
-        except Exception:
-            attendee_count = 0
+        attendee_count = booking.attendee_count
         return {
             "id": str(booking.id),
             "title": booking.title,
-            "organizer": organizer.name if organizer else "",
+            "organizer": (organizer.name or organizer.email) if organizer else "",
             "organizerEmail": organizer.email if organizer else "",
             "startTime": booking.start_time.isoformat(),
             "endTime": booking.end_time.isoformat(),
@@ -613,10 +610,11 @@ def book_adhoc(request, room_id):
         start_time=start_time,
         end_time=end_time,
         status=BookingStatus.CONFIRMED.value,
+        attendee_count=0,
     )
 
     # Return in Meeting shape (matches mobile RoomState.Meeting interface)
-    organizer_name = getattr(kiosk_user, 'name', None) or kiosk_user.email
+    organizer_name = kiosk_user.name or kiosk_user.email
 
     return Response(
         {
