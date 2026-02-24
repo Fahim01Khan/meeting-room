@@ -151,6 +151,11 @@ def create_booking(request):
             pass
 
     serializer = BookingSerializer(booking)
+
+    # Send confirmation email (fire-and-forget)
+    from bookings.emails import send_booking_confirmation
+    send_booking_confirmation(booking)
+
     return Response(
         {"success": True, "data": serializer.data},
         status=status.HTTP_201_CREATED,

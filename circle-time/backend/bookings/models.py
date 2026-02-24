@@ -66,6 +66,22 @@ class Booking(models.Model):
     
     # Attendee headcount (simple integer — separate from BookingAttendee through table)
     attendee_count = models.IntegerField(default=1, help_text="Number of expected attendees")
+
+    # Calendar integration fields
+    calendar_event_id = models.CharField(
+        max_length=500, blank=True, null=True, db_index=True,
+        help_text="External calendar event ID (Google, Microsoft, Zoho, Exchange)",
+    )
+    calendar_provider = models.CharField(
+        max_length=20, blank=True, null=True,
+        help_text="Which calendar provider created/synced this event",
+    )
+
+    # Notification tracking
+    reminder_sent = models.BooleanField(
+        default=False,
+        help_text="Whether a check-in reminder email has been sent for this booking",
+    )
     
     # Recurring booking fields
     is_recurring = models.BooleanField(

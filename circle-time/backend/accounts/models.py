@@ -85,3 +85,40 @@ class UserInvitation(models.Model):
 
     def __str__(self):
         return f"Invite {self.email} ({self.status})"
+
+
+class CalendarToken(models.Model):
+    """
+    Per-user OAuth token storage for external calendar providers.
+    One token per user per provider (unique_together constraint).
+    """
+
+    PROVIDER_CHOICES = [
+        ("google", "Google"),
+        ("microsoft", "Microsoft 365"),
+        ("zoho", "Zoho"),
+        ("exchange", "Exchange"),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="calendar_tokens"
+    )
+    provider = models.CharField(max_length=20, choices=PROVIDER_CHOICES)
+    access_token = models.TextField(help_text="OAuth access token (encrypted at rest in production)")
+    refresh_token = models.TextField(blank=True, default="")
+    token_expiry = models.DateTimeField(null=True, blank=True)
+    calendar_id = models.CharField(
+        max_length=500, blank=True, default="",
+        help_text="The specific calendar/resource ID to sync with",
+    )
+    scope = models.CharField(max_length=500, blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = [["user", "provider"]]
+        ordering = ["-updated_at"]
+
+    def __str__(self):
+        return f"{self.user.email} — {self.get_provider_display()}"

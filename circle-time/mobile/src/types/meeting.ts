@@ -54,7 +54,8 @@ export type ScreenType =
   | "checkin"
   | "endEarly"
   | "adHocBooking"
-  | "pairing";
+  | "pairing"
+  | "calendar-select";
 
 // Pairing types
 

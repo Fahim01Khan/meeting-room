@@ -7,6 +7,7 @@ from datetime import timedelta
 
 from bookings.models import Booking
 from bookings.constants import BookingStatus
+from bookings.emails import send_no_show_notification
 from organisation.models import OrganisationSettings
 
 logger = logging.getLogger(__name__)
@@ -60,12 +61,14 @@ class Command(BaseCommand):
             checked_in=False,
             start_time__lte=cutoff,
             end_time__gte=now,
-        ).exclude(
+        ).select_related("organizer", "room").exclude(
             status=BookingStatus.NO_SHOW.value,
         )
 
         count = stale_bookings.count()
         if count:
+            for booking in stale_bookings:
+                send_no_show_notification(booking)
             stale_bookings.update(status=BookingStatus.NO_SHOW.value)
             logger.info("Auto-released %d booking(s) as no-show", count)
         return count

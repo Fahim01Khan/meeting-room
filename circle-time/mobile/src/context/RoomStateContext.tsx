@@ -80,7 +80,7 @@ export const RoomStateProvider: React.FC<RoomStateProviderProps> = ({ children }
   const handlePaired = useCallback(async (newRoomId: string) => {
     await AsyncStorage.setItem(ROOM_ID_STORAGE_KEY, newRoomId);
     setRoomId(newRoomId);
-    setCurrentScreen('idle');
+    setCurrentScreen('calendar-select');
   }, []);
 
   // ── Clear the pairing (reset to pairing screen) ───────────────────────

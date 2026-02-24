@@ -13,7 +13,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from accounts.models import User, UserInvitation
+from accounts.models import User, UserInvitation, CalendarToken
 from accounts.serializers import LoginSerializer, UserSerializer
 
 logger = logging.getLogger(__name__)
@@ -454,4 +454,75 @@ def cancel_invitation(request, invitation_id):
     return Response(
         {"success": True},
         status=status.HTTP_200_OK,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Calendar token management
+# ---------------------------------------------------------------------------
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def list_calendar_tokens(request):
+    """
+    GET /api/auth/calendar-tokens
+    Returns the current user's connected calendar providers.
+    """
+    tokens = CalendarToken.objects.filter(user=request.user)
+    data = []
+    for t in tokens:
+        data.append({
+            "provider": t.provider,
+            "calendarId": t.calendar_id,
+            "tokenExpiry": t.token_expiry.isoformat() if t.token_expiry else None,
+            "connected": True,
+        })
+
+    return Response(
+        {"success": True, "data": data},
+        status=status.HTTP_200_OK,
+    )
+
+
+@api_view(["DELETE"])
+@permission_classes([IsAuthenticated])
+def disconnect_calendar_token(request, provider):
+    """
+    DELETE /api/auth/calendar-tokens/<provider>
+    Disconnects a calendar provider for the current user.
+    """
+    valid_providers = [c[0] for c in CalendarToken.PROVIDER_CHOICES]
+    if provider not in valid_providers:
+        return Response(
+            {"success": False, "message": f"Invalid provider. Must be one of: {valid_providers}"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    deleted, _ = CalendarToken.objects.filter(
+        user=request.user, provider=provider
+    ).delete()
+
+    if deleted == 0:
+        return Response(
+            {"success": False, "message": "No connection found for this provider."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    return Response(
+        {"success": True},
+        status=status.HTTP_200_OK,
+    )
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def calendar_token_callback(request):
+    """
+    POST /api/auth/calendar-tokens/callback
+    OAuth callback stub — will be wired up when OAuth credentials are registered.
+    Body: { provider, code, state, redirectUri }
+    """
+    return Response(
+        {"success": False, "message": "OAuth not yet configured for this provider"},
+        status=status.HTTP_501_NOT_IMPLEMENTED,
     )

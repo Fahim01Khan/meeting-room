@@ -9,8 +9,9 @@
         "testStrategy": "1. Verify migration generates correctly: `python manage.py makemigrations --check`.\n2. Verify CalendarToken can be created with all providers: write a unit test that creates tokens for zoho, google, microsoft providers and asserts unique_together constraint.\n3. Verify Booking.calendar_event_id is nullable and stores external IDs.\n4. Verify the unique_together constraint prevents duplicate (user, provider) combinations.\n5. Test that existing Booking data is unaffected by the new nullable field migration.",
         "priority": "high",
         "dependencies": [],
-        "status": "pending",
-        "subtasks": []
+        "status": "done",
+        "subtasks": [],
+        "updatedAt": "2026-02-24T14:03:03.515Z"
       },
       {
         "id": "2",
@@ -89,8 +90,9 @@
         "testStrategy": "1. Unit test send_meeting_reminder builds correct email with all attendees.\n2. Unit test send_noshow_notification uses organizer email.\n3. Unit test send_reminders management command finds only upcoming, un-reminded bookings.\n4. Test with Django's `django.core.mail.outbox` in test mode to verify email content and recipients.\n5. Verify auto_release command now sends notifications (mock send_mail, assert called).\n6. Verify end_booking view sends early-release notification.\n7. Test that reminders are not sent for cancelled or already checked-in bookings.",
         "priority": "medium",
         "dependencies": [],
-        "status": "pending",
-        "subtasks": []
+        "status": "done",
+        "subtasks": [],
+        "updatedAt": "2026-02-24T14:08:07.427Z"
       },
       {
         "id": "8",
@@ -153,9 +155,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-02-24T08:43:08.624Z",
+      "lastModified": "2026-02-24T14:08:07.429Z",
       "taskCount": 12,
-      "completedCount": 1,
+      "completedCount": 3,
       "tags": [
         "master"
       ]

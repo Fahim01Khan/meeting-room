@@ -17,6 +17,7 @@ import { MeetingScreen } from './src/screens/MeetingScreen';
 import { CheckInScreen } from './src/screens/CheckInScreen';
 import { EndEarlyScreen } from './src/screens/EndEarlyModal';
 import { AdHocBookingScreen } from './src/screens/AdHocBookingScreen';
+import { CalendarSelectScreen } from './src/screens/CalendarSelectScreen';
 
 // Screen renderer based on current state
 const ScreenRenderer: React.FC = () => {
@@ -25,6 +26,8 @@ const ScreenRenderer: React.FC = () => {
   switch (currentScreen) {
     case 'pairing':
       return <PairingScreen onPaired={handlePaired} />;
+    case 'calendar-select':
+      return <CalendarSelectScreen />;
     case 'meeting':
       return <MeetingScreen />;
     case 'checkin':
