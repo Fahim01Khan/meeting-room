@@ -31,47 +31,45 @@ export const PrimaryButton: React.FC<PrimaryButtonProps> = ({
   style,
 }) => {
   const getButtonStyle = (): ViewStyle => {
-    const baseStyle: ViewStyle = {
+    const base: ViewStyle = {
       ...styles.button,
       ...(size === 'large' ? styles.buttonLarge : styles.buttonMedium),
       ...(fullWidth && styles.fullWidth),
       ...shadows.md,
     };
 
-    if (disabled || loading) {
-      return { ...baseStyle, ...styles.disabled };
-    }
+    if (disabled || loading) return { ...base, ...styles.disabled };
 
     switch (variant) {
       case 'secondary':
-        return { ...baseStyle, backgroundColor: colors.backgroundSecondary };
+        return { ...base, backgroundColor: colors.backgroundSecondary };
       case 'danger':
-        return { ...baseStyle, backgroundColor: colors.error };
+        return { ...base, backgroundColor: colors.error };
       case 'outline':
         return {
-          ...baseStyle,
+          ...base,
           backgroundColor: 'transparent',
           borderWidth: 2,
           borderColor: colors.primary,
         };
       default:
-        return { ...baseStyle, backgroundColor: colors.primary };
+        return { ...base, backgroundColor: colors.primary };
     }
   };
 
   const getTextStyle = (): TextStyle => {
-    const baseStyle: TextStyle = {
+    const base: TextStyle = {
       ...styles.text,
       ...(size === 'large' ? styles.textLarge : styles.textMedium),
     };
 
     switch (variant) {
       case 'secondary':
-        return { ...baseStyle, color: colors.text };
+        return { ...base, color: colors.text };
       case 'outline':
-        return { ...baseStyle, color: colors.primary };
+        return { ...base, color: colors.primary };
       default:
-        return { ...baseStyle, color: colors.background };
+        return { ...base, color: colors.background };
     }
   };
 
