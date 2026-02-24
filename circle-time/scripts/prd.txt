@@ -1,0 +1,74 @@
+# Circle Time — Product Requirements Document
+
+## Overview
+Circle Time is a meeting room booking and management system built
+for GROWORX, a technology company based in Johannesburg, South Africa.
+The system replicates and extends Fishbowl Meetings functionality.
+150 employees, 8 meeting rooms.
+
+## Architecture
+- Backend: Django 6.0.2, PostgreSQL, Django REST Framework, SimpleJWT
+- Web frontend: React 18, TypeScript, Vite, Tailwind CSS v4
+- Mobile/tablet: React Native 0.76, deployed on SUNMI M2 MAX tablets
+- Hosted locally, accessed via LAN (Moonstone.local)
+
+## Completed Features
+1. Room booking (web) — create, edit, cancel, recurring bookings
+2. Room management (admin) — CRUD via web UI
+3. Tablet pairing — Fishbowl-style 6-digit code pairing flow
+4. Tablet display — idle, check-in, meeting, ad-hoc booking screens
+5. Check-in — tablet check-in with configurable window
+6. Ad-hoc booking — walk-up booking from tablet (kiosk user)
+7. User management — email invite flow via SendGrid
+8. Organisation settings — branding, check-in window, business hours
+9. Analytics — dashboard, utilization, ghosting, capacity views
+10. Provider gateway — adapter pattern for calendar sync (stubbed)
+
+## In Progress
+- Analytics page consolidation (4 pages → 1 tabbed page)
+- Attendee count on bookings
+- Organisation settings wired to frontend (branding applied)
+- Auto-release (no-show management via management command)
+
+## Remaining Features (Priority Order)
+
+### Phase 2 — Calendar Sync (waiting on client OAuth credentials)
+- Zoho Calendar integration (client's primary calendar)
+- Google Workspace integration
+- Microsoft 365 / Outlook integration
+- Support syncing multiple calendars simultaneously
+  (differentiator over Fishbowl which supports only one)
+- CalendarToken model for per-user token storage
+- calendar_event_id field on Booking model
+- Two-way sync: bookings → calendar, calendar → bookings
+
+### Phase 3 — Notifications
+- Email reminders before meetings (via SendGrid)
+- Notification when room released early
+- No-show notifications to organiser
+
+### Phase 4 — Production Readiness
+- Environment-based settings (dev/staging/prod)
+- WSGI/ASGI production server config (Gunicorn/Uvicorn)
+- Release APK build pipeline for tablets
+- SSL/HTTPS setup
+- Secret key rotation
+- Database backups
+
+### Phase 5 — Polish
+- GROWORX branding applied throughout (logo, colours)
+- Floor map with real room positions
+- Extend meeting from tablet (currently stubbed)
+- Report room issue from tablet (currently stubbed)
+- LED status light integration (future hardware)
+
+## Users
+- Admin: full access to all features
+- User (general): booking access only
+- Kiosk: system account for tablet ad-hoc bookings
+
+## Key Constraints
+- Tablet must work standalone (no USB, no Metro)
+- API must work on local network via mDNS hostname
+- No hardcoded UUIDs or IP addresses
+- All times in Africa/Johannesburg timezone

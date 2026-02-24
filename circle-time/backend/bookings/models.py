@@ -64,6 +64,9 @@ class Booking(models.Model):
     checked_in = models.BooleanField(default=False)
     checked_in_at = models.DateTimeField(null=True, blank=True)
     
+    # Attendee headcount (simple integer — separate from BookingAttendee through table)
+    attendee_count = models.IntegerField(default=1, help_text="Number of expected attendees")
+    
     # Recurring booking fields
     is_recurring = models.BooleanField(
         default=False,

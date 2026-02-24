@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef, type ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { RoomState, ScreenType } from '../types/meeting';
-import { fetchRoomState, checkInMeeting, endMeetingEarly, bookAdHoc } from '../services/api';
+import { fetchRoomState, checkInMeeting, endMeetingEarly, bookAdHoc, fetchOrgSettings } from '../services/api';
 import { subscribeToRoomUpdates, startPolling, stopPolling } from '../services/realtime';
 import { cacheRoomState, getCachedRoomState } from '../services/cache';
 
@@ -15,6 +15,9 @@ interface RoomStateContextValue {
   isLoading: boolean;
   error: string | null;
   roomId: string | null;
+  orgName: string;
+  primaryColour: string;
+  logoUrl: string | null;
   setCurrentScreen: (screen: ScreenType) => void;
   refreshRoomState: () => Promise<void>;
   handleCheckIn: () => Promise<boolean>;
@@ -36,13 +39,16 @@ export const RoomStateProvider: React.FC<RoomStateProviderProps> = ({ children }
   const [currentScreen, setCurrentScreen] = useState<ScreenType>('pairing');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [orgName, setOrgName] = useState('');
+  const [primaryColour, setPrimaryColour] = useState('#2563EB');
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
 
   // Ref used by the auto-switch effect to read currentScreen without adding it
   // to the dependency array (which would cause an infinite update loop).
   const currentScreenRef = useRef<ScreenType>('pairing');
   currentScreenRef.current = currentScreen;
 
-  // ── On mount: load saved roomId from AsyncStorage ──────────────────────
+  // ── On mount: load saved roomId from AsyncStorage + fetch org settings ─
   useEffect(() => {
     AsyncStorage.getItem(ROOM_ID_STORAGE_KEY)
       .then((savedId) => {
@@ -60,6 +66,14 @@ export const RoomStateProvider: React.FC<RoomStateProviderProps> = ({ children }
       .finally(() => {
         setIsLoading(false);
       });
+
+    fetchOrgSettings().then((settings) => {
+      if (settings) {
+        setOrgName(settings.orgName);
+        setPrimaryColour(settings.primaryColour);
+        setLogoUrl(settings.logoUrl);
+      }
+    });
   }, []);
 
   // ── Called by PairingScreen when admin pairs the device ────────────────
@@ -252,6 +266,9 @@ export const RoomStateProvider: React.FC<RoomStateProviderProps> = ({ children }
     isLoading,
     error,
     roomId,
+    orgName,
+    primaryColour,
+    logoUrl,
     setCurrentScreen,
     refreshRoomState,
     handleCheckIn,

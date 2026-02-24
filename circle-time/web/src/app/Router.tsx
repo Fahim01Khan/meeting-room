@@ -7,10 +7,7 @@ import { RoomSearch } from '../pages/Booking/RoomSearch';
 import { FloorMap } from '../pages/Booking/FloorMap';
 import { RoomDetails } from '../pages/Booking/RoomDetails';
 import { BookingModal } from '../pages/Booking/BookingModal';
-import { Dashboard } from '../pages/Admin/Dashboard';
-import { UtilizationView } from '../pages/Admin/UtilizationView';
-import { GhostingView } from '../pages/Admin/GhostingView';
-import { CapacityView } from '../pages/Admin/CapacityView';
+import { AnalyticsPage } from '../pages/Admin/AnalyticsPage';
 import { DevicesPage } from '../pages/Admin/DevicesPage';
 import { RoomsPage } from '../pages/Admin/RoomsPage';
 import { UsersPage } from '../pages/Admin/UsersPage';
@@ -41,11 +38,8 @@ export const Router: React.FC = () => {
           <Route path="floor-map" element={<FloorMapWrapper />} />
           
           {/* Admin Routes */}
-          <Route path="admin" element={<Navigate to="/admin/dashboard" replace />} />
-          <Route path="admin/dashboard" element={<Dashboard />} />
-          <Route path="admin/utilization" element={<UtilizationView />} />
-          <Route path="admin/ghosting" element={<GhostingView />} />
-          <Route path="admin/capacity" element={<CapacityView />} />
+          <Route path="admin" element={<Navigate to="/admin/analytics" replace />} />
+          <Route path="admin/analytics" element={<AnalyticsPage />} />
           <Route path="admin/users" element={<UsersPage />} />
           <Route path="admin/rooms" element={<RoomsPage />} />
           <Route path="admin/devices" element={<DevicesPage />} />

@@ -91,6 +91,28 @@ export const bookAdHoc = async (
   }
 };
 
+// ---------------------------------------------------------------------------
+// Org settings
+// ---------------------------------------------------------------------------
+
+export interface OrgSettingsResult {
+  orgName: string;
+  primaryColour: string;
+  logoUrl: string | null;
+}
+
+export const fetchOrgSettings = async (): Promise<OrgSettingsResult | null> => {
+  try {
+    const res = await fetch(`${API_BASE_URL}/organisation/settings`);
+    if (!res.ok) return null;
+    const json = await res.json();
+    return json.success ? (json.data as OrgSettingsResult) : null;
+  } catch (err) {
+    console.error("fetchOrgSettings error:", err);
+    return null;
+  }
+};
+
 export const reportRoomIssue = async (
   roomId: string,
   issue: string,

@@ -26,6 +26,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     startTime: '',
     endTime: '',
     attendeeIds: [],
+    attendeeCount: 1,
   });
   const [errors, setErrors] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -123,6 +124,28 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 value={formData.description}
                 onChange={(e) => handleInputChange('description', e.target.value)}
               />
+            </div>
+
+            <div className={styles.formGroup}>
+              <label className={styles.label} htmlFor="attendeeCount">
+                Number of Attendees
+              </label>
+              <input
+                id="attendeeCount"
+                type="number"
+                className={styles.input}
+                min={1}
+                max={50}
+                value={formData.attendeeCount ?? 1}
+                onChange={(e) => {
+                  const val = Math.max(1, Math.min(50, Number(e.target.value)));
+                  setFormData((prev) => ({ ...prev, attendeeCount: val }));
+                  setErrors([]);
+                }}
+              />
+              <span className={styles.hint ?? ''} style={{ fontSize: '12px', color: '#94A3B8', marginTop: '4px', display: 'block' }}>
+                How many people will attend?
+              </span>
             </div>
 
             <div className={styles.formGroup}>

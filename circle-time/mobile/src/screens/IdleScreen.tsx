@@ -1,14 +1,14 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, useWindowDimensions } from 'react-native';
+import { View, Text, Image, StyleSheet, useWindowDimensions } from 'react-native';
 import { colors, typography, spacing, borderRadius, shadows } from '../styles/theme';
 import { StatusIndicator } from '../components/StatusIndicator';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { useRoomState } from '../context/RoomStateContext';
 
 export const IdleScreen: React.FC = () => {
-  const { roomState, setCurrentScreen } = useRoomState();
+  const { roomState, setCurrentScreen, orgName, primaryColour, logoUrl } = useRoomState();
   const [currentTime, setCurrentTime] = useState(new Date());
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
@@ -103,6 +103,11 @@ export const IdleScreen: React.FC = () => {
 
           {/* Left column: clock + room identity */}
           <View style={styles.landscapeLeft}>
+            {logoUrl ? (
+              <Image source={{ uri: logoUrl }} style={styles.brandLogoLandscape} resizeMode="contain" />
+            ) : (
+              <Text style={styles.brandNameLandscape}>{orgName}</Text>
+            )}
             <Text style={styles.timeLandscape}>{formatTime(currentTime)}</Text>
             <Text style={styles.dateLandscape}>{formatDate(currentTime)}</Text>
             <View style={styles.landscapeDivider} />
@@ -133,6 +138,7 @@ export const IdleScreen: React.FC = () => {
                   variant="primary"
                   size="large"
                   fullWidth
+                  style={{ backgroundColor: primaryColour }}
                 />
               )}
               <View style={styles.footer}>
@@ -151,6 +157,15 @@ export const IdleScreen: React.FC = () => {
   // ─── Portrait fallback ───────────────────────────────────────────────────────
   return (
     <View style={[styles.container, styles.portraitContainer, { backgroundColor: bgColor }]}>
+      {/* Branding */}
+      <View style={styles.brandingHeader}>
+        {logoUrl ? (
+          <Image source={{ uri: logoUrl }} style={styles.brandLogo} resizeMode="contain" />
+        ) : (
+          <Text style={styles.brandName}>{orgName}</Text>
+        )}
+      </View>
+
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.time}>{formatTime(currentTime)}</Text>
@@ -187,6 +202,7 @@ export const IdleScreen: React.FC = () => {
             variant="primary"
             size="large"
             fullWidth
+            style={{ backgroundColor: primaryColour }}
           />
         </View>
       )}
@@ -214,6 +230,33 @@ const styles = StyleSheet.create({
     fontSize: typography.fontSize.xl,
     color: colors.textSecondary,
     textAlign: 'center',
+  },
+
+  // ── Branding ──────────────────────────────────────────────────────────────────
+  brandingHeader: {
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  brandLogo: {
+    height: 48,
+    width: 160,
+    marginBottom: spacing.xs,
+  },
+  brandName: {
+    fontSize: typography.fontSize.xl,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.textSecondary,
+  },
+  brandLogoLandscape: {
+    height: 40,
+    width: 140,
+    marginBottom: spacing.sm,
+  },
+  brandNameLandscape: {
+    fontSize: typography.fontSize.lg,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.textSecondary,
+    marginBottom: spacing.sm,
   },
 
   // ── Landscape layout ──────────────────────────────────────────────────────────

@@ -32,7 +32,7 @@ def _meeting_to_mobile(booking):
         "organizerEmail": booking.organizer.email,
         "startTime": booking.start_time.isoformat(),
         "endTime": booking.end_time.isoformat(),
-        "attendeeCount": booking.booking_attendees.count(),
+        "attendeeCount": booking.attendee_count,
         "checkedIn": booking.checked_in,
         "checkedInAt": booking.checked_in_at.isoformat() if booking.checked_in_at else None,
     }

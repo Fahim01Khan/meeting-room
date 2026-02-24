@@ -138,6 +138,7 @@ def create_booking(request):
         start_time=start,
         end_time=end,
         status=BookingStatus.CONFIRMED.value,
+        attendee_count=data.get("attendeeCount", 1),
     )
 
     # Attach attendees
@@ -584,13 +585,15 @@ def checkin_booking(request, booking_id):
     org_settings = OrganisationSettings.get()
     now = timezone.now()
     window_minutes = org_settings.checkin_window_minutes
+    print(f"[checkin] window={window_minutes} minutes, booking_start={booking.start_time}")
 
-    # Check-in is valid from start_time up to start_time + window
+    # Check-in is valid from start_time - window to start_time + window
     from datetime import timedelta
+    window_start = booking.start_time - timedelta(minutes=window_minutes)
     window_end = booking.start_time + timedelta(minutes=window_minutes)
-    if now > window_end:
+    if now < window_start or now > window_end:
         return Response(
-            {"success": False, "message": "Check-in window has expired"},
+            {"success": False, "message": f"Check-in opens {window_minutes} minutes before the meeting"},
             status=status.HTTP_400_BAD_REQUEST,
         )
 

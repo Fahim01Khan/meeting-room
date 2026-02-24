@@ -37,6 +37,7 @@ export interface BookingRequest {
   startTime: string;
   endTime: string;
   attendeeIds: string[];
+  attendeeCount?: number;
 }
 
 export interface TimeSlot {

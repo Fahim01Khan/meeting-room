@@ -81,6 +81,7 @@ class BookingCreateSerializer(serializers.Serializer):
     attendeeIds = serializers.ListField(
         child=serializers.UUIDField(), required=False, default=list
     )
+    attendeeCount = serializers.IntegerField(required=False, default=1, min_value=1, max_value=50)
 
 
 class BookingUpdateSerializer(serializers.Serializer):

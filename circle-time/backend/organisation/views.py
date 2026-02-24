@@ -2,7 +2,7 @@ import re
 from datetime import time as dt_time
 
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework import status
 
@@ -33,19 +33,22 @@ def _settings_to_dict(obj: OrganisationSettings) -> dict:
     }
 
 
-# ── GET /api/organisation/settings ───────────────────────────────────────────
+# ── GET + PUT /api/organisation/settings ─────────────────────────────────────
 
 @api_view(["GET", "PUT"])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def organisation_settings(request):
+    """GET is public (tablet needs it), PUT requires authenticated admin."""
     if request.method == "GET":
-        return _get_settings(request)
+        obj = OrganisationSettings.get()
+        return Response({"success": True, "data": _settings_to_dict(obj)})
+    # PUT — require authenticated admin
+    if not request.user or not request.user.is_authenticated:
+        return Response(
+            {"success": False, "message": "Authentication required"},
+            status=status.HTTP_401_UNAUTHORIZED,
+        )
     return _update_settings(request)
-
-
-def _get_settings(request):
-    obj = OrganisationSettings.get()
-    return Response({"success": True, "data": _settings_to_dict(obj)})
 
 
 # ── PUT /api/organisation/settings ───────────────────────────────────────────

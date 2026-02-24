@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { colors, spacing, typography, borderRadius, shadows } from '../styles/theme';
 import { clearTokens, apiClient } from '../services/api';
+import { useOrgSettings } from '../context/OrgSettingsContext';
 
 interface NavItem {
   path: string;
@@ -37,49 +38,14 @@ const bookingNavItems: NavItem[] = [
 
 const adminNavItems: NavItem[] = [
   {
-    path: '/admin/dashboard',
-    label: 'Dashboard',
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <rect x="3" y="3" width="7" height="7" />
-        <rect x="14" y="3" width="7" height="7" />
-        <rect x="14" y="14" width="7" height="7" />
-        <rect x="3" y="14" width="7" height="7" />
-      </svg>
-    ),
-  },
-  {
-    path: '/admin/utilization',
-    label: 'Utilization',
+    path: '/admin/analytics',
+    label: 'Analytics',
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <path d="M3 3v18h18" />
         <path d="M18 17V9" />
         <path d="M13 17V5" />
         <path d="M8 17v-3" />
-      </svg>
-    ),
-  },
-  {
-    path: '/admin/ghosting',
-    label: 'Ghosting',
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <circle cx="12" cy="12" r="10" />
-        <path d="M12 8v4" />
-        <path d="M12 16h.01" />
-      </svg>
-    ),
-  },
-  {
-    path: '/admin/capacity',
-    label: 'Capacity',
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-        <circle cx="9" cy="7" r="4" />
-        <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
       </svg>
     ),
   },
@@ -131,6 +97,7 @@ export const Layout: React.FC = () => {
   const location = useLocation();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [user, setUser] = useState<{ name: string; role: string } | null>(null);
+  const { orgName, primaryColour, logoUrl } = useOrgSettings();
 
   useEffect(() => {
     apiClient.get<{ name: string; role: string; email: string }>('/auth/me')
@@ -172,7 +139,7 @@ export const Layout: React.FC = () => {
   const logoStyle: React.CSSProperties = {
     width: '40px',
     height: '40px',
-    backgroundColor: colors.primary,
+    backgroundColor: primaryColour || colors.primary,
     borderRadius: borderRadius.md,
     display: 'flex',
     alignItems: 'center',
@@ -277,13 +244,19 @@ export const Layout: React.FC = () => {
       <aside style={sidebarStyle}>
         <div style={logoContainerStyle}>
           <div style={logoStyle}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
-              <rect x="3" y="3" width="18" height="18" rx="2" />
-              <path d="M3 9h18" />
-              <path d="M9 21V9" />
-            </svg>
+            {logoUrl ? (
+              <img
+                src={logoUrl}
+                alt={orgName}
+                style={{ height: '32px', maxWidth: '140px', objectFit: 'contain', filter: 'brightness(0) invert(1)' }}
+              />
+            ) : (
+              <span style={{ color: '#fff', fontWeight: 700, fontSize: '18px' }}>
+                {orgName}
+              </span>
+            )}
           </div>
-          <span style={logoTextStyle}>MeetingRooms</span>
+          <span style={logoTextStyle}>{orgName || 'MeetingRooms'}</span>
         </div>
 
         <nav style={{ flex: 1 }}>

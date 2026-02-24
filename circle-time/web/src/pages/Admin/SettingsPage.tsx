@@ -3,6 +3,7 @@ import { fetchSettings, updateSettings } from '../../services/organisation';
 import type { OrgSettings, OrgSettingsUpdate } from '../../services/organisation';
 import { ApiClientError } from '../../services/api';
 import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme';
+import { useOrgSettings } from '../../context/OrgSettingsContext';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -31,6 +32,7 @@ export const SettingsPage: React.FC = () => {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
+  const { refresh: refreshOrgSettings } = useOrgSettings();
 
   const loadSettings = useCallback(async () => {
     setIsLoading(true);
@@ -99,6 +101,7 @@ export const SettingsPage: React.FC = () => {
       const updated = await updateSettings(payload);
       setSaved(updated);
       setDraft(updated);
+      refreshOrgSettings(updated);
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 3000);
     } catch (err) {
