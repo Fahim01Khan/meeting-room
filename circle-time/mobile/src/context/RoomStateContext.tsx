@@ -18,6 +18,7 @@ interface RoomStateContextValue {
   orgName: string;
   primaryColour: string;
   logoUrl: string | null;
+  checkinWindowMinutes: number;
   setCurrentScreen: (screen: ScreenType) => void;
   refreshRoomState: () => Promise<void>;
   handleCheckIn: () => Promise<boolean>;
@@ -42,6 +43,7 @@ export const RoomStateProvider: React.FC<RoomStateProviderProps> = ({ children }
   const [orgName, setOrgName] = useState('');
   const [primaryColour, setPrimaryColour] = useState('#2563EB');
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [checkinWindowMinutes, setCheckinWindowMinutes] = useState(15);
 
   // Ref used by the auto-switch effect to read currentScreen without adding it
   // to the dependency array (which would cause an infinite update loop).
@@ -72,6 +74,9 @@ export const RoomStateProvider: React.FC<RoomStateProviderProps> = ({ children }
         setOrgName(settings.orgName);
         setPrimaryColour(settings.primaryColour);
         setLogoUrl(settings.logoUrl);
+        if (settings.checkinWindowMinutes) {
+          setCheckinWindowMinutes(settings.checkinWindowMinutes);
+        }
       }
     });
   }, []);
@@ -269,6 +274,7 @@ export const RoomStateProvider: React.FC<RoomStateProviderProps> = ({ children }
     orgName,
     primaryColour,
     logoUrl,
+    checkinWindowMinutes,
     setCurrentScreen,
     refreshRoomState,
     handleCheckIn,

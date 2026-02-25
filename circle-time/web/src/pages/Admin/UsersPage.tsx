@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { fetchUsers, fetchInvitations, cancelInvitation } from '../../services/users';
+import { fetchUsers, fetchInvitations, cancelInvitation, deleteUser } from '../../services/users';
 import type { UserRecord, InvitationRecord } from '../../services/users';
 import { InviteModal } from './InviteModal';
-import { ApiClientError } from '../../services/api';
+import { ApiClientError, apiClient } from '../../services/api';
 import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme';
 
 export const UsersPage: React.FC = () => {
@@ -12,6 +12,7 @@ export const UsersPage: React.FC = () => {
   const [isLoadingInvites, setIsLoadingInvites] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showInviteModal, setShowInviteModal] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   const loadUsers = useCallback(async () => {
     setIsLoadingUsers(true);
@@ -45,6 +46,10 @@ export const UsersPage: React.FC = () => {
 
   useEffect(() => {
     loadAll();
+    // Fetch current user ID
+    apiClient.get<{ id: string; name: string; email: string }>('/auth/me')
+      .then((res) => setCurrentUserId(res.data.id))
+      .catch(() => {});
   }, [loadAll]);
 
   const handleCancel = async (id: string) => {
@@ -56,6 +61,23 @@ export const UsersPage: React.FC = () => {
         setError(err.message);
       } else {
         setError('Failed to cancel invitation.');
+      }
+    }
+  };
+
+  const handleDeleteUser = async (user: UserRecord) => {
+    const confirmed = window.confirm(
+      `Remove ${user.name} from Circle Time? This cannot be undone.`
+    );
+    if (!confirmed) return;
+    try {
+      await deleteUser(user.id);
+      loadUsers();
+    } catch (err) {
+      if (err instanceof ApiClientError) {
+        setError(err.message);
+      } else {
+        setError('Failed to delete user.');
       }
     }
   };
@@ -239,6 +261,7 @@ export const UsersPage: React.FC = () => {
                 <th style={thStyle}>Role</th>
                 <th style={thStyle}>Department</th>
                 <th style={thStyle}>Joined</th>
+                <th style={{ ...thStyle, textAlign: 'right' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -260,6 +283,28 @@ export const UsersPage: React.FC = () => {
                       month: 'short',
                       year: 'numeric',
                     })}
+                  </td>
+                  <td style={{ ...tdStyle, textAlign: 'right' }}>
+                    {u.id !== currentUserId && (
+                      <button
+                        type="button"
+                        style={{
+                          ...iconBtnStyle,
+                          color: colors.textMuted,
+                        }}
+                        title="Remove user"
+                        onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = colors.error; }}
+                        onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = colors.textMuted; }}
+                        onClick={() => handleDeleteUser(u)}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <polyline points="3 6 5 6 21 6" />
+                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                          <line x1="10" y1="11" x2="10" y2="17" />
+                          <line x1="14" y1="11" x2="14" y2="17" />
+                        </svg>
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}

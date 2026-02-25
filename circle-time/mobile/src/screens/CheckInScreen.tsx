@@ -7,8 +7,8 @@ import { PrimaryButton } from '../components/PrimaryButton';
 import { useRoomState } from '../context/RoomStateContext';
 
 export const CheckInScreen: React.FC = () => {
-  const { roomState, handleCheckIn, handleEndEarly, isLoading } = useRoomState();
-  const [countdown, setCountdown] = useState(15 * 60); // 15 minutes in seconds
+  const { roomState, handleCheckIn, handleEndEarly, isLoading, checkinWindowMinutes } = useRoomState();
+  const [countdown, setCountdown] = useState(checkinWindowMinutes * 60);
   const [checkInError, setCheckInError] = useState<string | null>(null);
   const [isEnding, setIsEnding] = useState(false);
   const { width, height } = useWindowDimensions();
@@ -96,7 +96,7 @@ export const CheckInScreen: React.FC = () => {
                   style={[
                     styles.progressFill,
                     {
-                      width: `${(countdown / (15 * 60)) * 100}%`,
+                      width: `${(countdown / (checkinWindowMinutes * 60)) * 100}%`,
                       backgroundColor: isUrgent ? colors.error : colors.primary,
                     },
                   ]}
@@ -125,7 +125,7 @@ export const CheckInScreen: React.FC = () => {
 
             <View style={styles.meetingCard}>
               <Text style={styles.meetingTitle}>{meeting.title}</Text>
-              <Text style={styles.meetingOrganizer}>{meeting.organizer}</Text>
+              <Text style={styles.meetingOrganizer}>{meeting.organizer || 'Kiosk User'}</Text>
               <Text style={styles.meetingTime}>
                 {formatTime(meeting.startTime)} - {formatTime(meeting.endTime)}
               </Text>
@@ -195,7 +195,7 @@ export const CheckInScreen: React.FC = () => {
             style={[
               styles.progressFill,
               {
-                width: `${(countdown / (15 * 60)) * 100}%`,
+                width: `${(countdown / (checkinWindowMinutes * 60)) * 100}%`,
                 backgroundColor: isUrgent ? colors.error : colors.primary,
               },
             ]}
@@ -206,7 +206,7 @@ export const CheckInScreen: React.FC = () => {
       {/* Meeting Info */}
       <View style={styles.meetingCard}>
         <Text style={styles.meetingTitle}>{meeting.title}</Text>
-        <Text style={styles.meetingOrganizer}>{meeting.organizer}</Text>
+        <Text style={styles.meetingOrganizer}>{meeting.organizer || 'Kiosk User'}</Text>
         <Text style={styles.meetingTime}>
           {formatTime(meeting.startTime)} - {formatTime(meeting.endTime)}
         </Text>

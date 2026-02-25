@@ -162,6 +162,47 @@ def list_users(request):
     )
 
 
+@api_view(["DELETE"])
+@permission_classes([IsAuthenticated])
+def delete_user(request, user_id):
+    """
+    DELETE /api/auth/users/<uuid:user_id>
+    Delete a user. Admin only. Cannot delete yourself or the kiosk user.
+    """
+    if request.user.role != "admin":
+        return Response(
+            {"success": False, "message": "Admin access required"},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
+    if str(request.user.id) == str(user_id):
+        return Response(
+            {"success": False, "message": "You cannot delete your own account"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    try:
+        user = User.objects.get(id=user_id)
+    except User.DoesNotExist:
+        return Response(
+            {"success": False, "message": "User not found"},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    if user.email == "kiosk@circletime.io":
+        return Response(
+            {"success": False, "message": "Cannot delete the kiosk system user"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    user.delete()
+
+    return Response(
+        {"success": True},
+        status=status.HTTP_200_OK,
+    )
+
+
 # ---------------------------------------------------------------------------
 # Invitation endpoints
 # ---------------------------------------------------------------------------

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { fetchSettings, updateSettings } from '../../services/organisation';
 import type { OrgSettings, OrgSettingsUpdate } from '../../services/organisation';
 import { ApiClientError } from '../../services/api';
@@ -33,6 +33,8 @@ export const SettingsPage: React.FC = () => {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
   const { refresh: refreshOrgSettings } = useOrgSettings();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
 
   const loadSettings = useCallback(async () => {
     setIsLoading(true);
@@ -80,6 +82,47 @@ export const SettingsPage: React.FC = () => {
     } catch {
       return false;
     }
+  };
+
+  const isBase64Image = (url: string | null) => {
+    return url ? url.startsWith('data:image/') : false;
+  };
+
+  const ACCEPTED_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml'];
+  const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
+
+  const handleFileSelect = (file: File) => {
+    if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
+      setSaveError('Invalid file type. Please use PNG, JPEG, WebP, or SVG.');
+      return;
+    }
+    if (file.size > MAX_FILE_SIZE) {
+      setSaveError('File too large. Maximum size is 2MB.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target?.result as string;
+      setField('logoUrl', dataUrl);
+      setSaveError(null);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files[0];
+    if (file) handleFileSelect(file);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragging(false);
   };
 
   // ── Save ──────────────────────────────────────────────────────────────────
@@ -322,16 +365,18 @@ export const SettingsPage: React.FC = () => {
         {/* Logo URL */}
         <div style={fieldRowStyle}>
           <label style={labelStyle} htmlFor="logoUrl">Logo URL</label>
-          <input
-            id="logoUrl"
-            type="url"
-            style={inputStyle}
-            value={draft.logoUrl ?? ''}
-            onChange={(e) => setField('logoUrl', e.target.value || null)}
-            placeholder="https://example.com/logo.png"
-          />
-          {isValidUrl(draft.logoUrl) && (
-            <div style={{ marginTop: spacing.sm }}>
+          {!isBase64Image(draft.logoUrl) && (
+            <input
+              id="logoUrl"
+              type="url"
+              style={inputStyle}
+              value={draft.logoUrl ?? ''}
+              onChange={(e) => setField('logoUrl', e.target.value || null)}
+              placeholder="https://example.com/logo.png"
+            />
+          )}
+          {(isValidUrl(draft.logoUrl) || isBase64Image(draft.logoUrl)) && (
+            <div style={{ marginTop: spacing.sm, display: 'flex', alignItems: 'center', gap: spacing.sm }}>
               <img
                 src={draft.logoUrl!}
                 alt="Logo preview"
@@ -344,6 +389,59 @@ export const SettingsPage: React.FC = () => {
                   padding: '4px',
                 }}
                 onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+              />
+              {isBase64Image(draft.logoUrl) && (
+                <button
+                  type="button"
+                  onClick={() => setField('logoUrl', null)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontSize: typography.fontSize.lg,
+                    color: colors.textMuted,
+                    lineHeight: 1,
+                  }}
+                  title="Clear uploaded image"
+                >
+                  ×
+                </button>
+              )}
+            </div>
+          )}
+          {!isBase64Image(draft.logoUrl) && (
+            <div
+              onDrop={handleDrop}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onClick={() => fileInputRef.current?.click()}
+              style={{
+                marginTop: spacing.sm,
+                padding: spacing.lg,
+                border: `2px dashed ${isDragging ? colors.primary : colors.border}`,
+                borderRadius: borderRadius.md,
+                backgroundColor: isDragging ? colors.primaryLight : colors.backgroundSecondary,
+                textAlign: 'center',
+                cursor: 'pointer',
+                transition: 'border-color 0.2s, background-color 0.2s',
+              }}
+            >
+              <p style={{ margin: 0, fontSize: typography.fontSize.sm, color: colors.textSecondary }}>
+                📁 Drop image here or click to browse
+              </p>
+              <p style={{ margin: `${spacing.xs} 0 0`, fontSize: typography.fontSize.xs, color: colors.textMuted }}>
+                PNG, JPEG, WebP, or SVG · Max 2MB
+              </p>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                style={{ display: 'none' }}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleFileSelect(file);
+                  e.target.value = '';
+                }}
               />
             </div>
           )}

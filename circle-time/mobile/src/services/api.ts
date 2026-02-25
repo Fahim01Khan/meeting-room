@@ -99,6 +99,7 @@ export interface OrgSettingsResult {
   orgName: string;
   primaryColour: string;
   logoUrl: string | null;
+  checkinWindowMinutes: number;
 }
 
 export const fetchOrgSettings = async (): Promise<OrgSettingsResult | null> => {

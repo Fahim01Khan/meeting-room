@@ -2,12 +2,11 @@ import React, { useState } from 'react';
 import { Dashboard } from './Dashboard';
 import { UtilizationView } from './UtilizationView';
 import { GhostingView } from './GhostingView';
-import { CapacityView } from './CapacityView';
 import { colors, spacing, typography, borderRadius } from '../../styles/theme';
 
 // ── Tab definitions ───────────────────────────────────────────────────────────
 
-type TabKey = 'dashboard' | 'utilization' | 'ghosting' | 'capacity';
+type TabKey = 'dashboard' | 'utilization' | 'ghosting';
 
 interface Tab {
   key: TabKey;
@@ -18,7 +17,6 @@ const TABS: Tab[] = [
   { key: 'dashboard', label: 'Dashboard' },
   { key: 'utilization', label: 'Utilization' },
   { key: 'ghosting', label: 'Ghosting' },
-  { key: 'capacity', label: 'Capacity' },
 ];
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -74,7 +72,6 @@ export const AnalyticsPage: React.FC = () => {
         {activeTab === 'dashboard' && <Dashboard />}
         {activeTab === 'utilization' && <UtilizationView />}
         {activeTab === 'ghosting' && <GhostingView />}
-        {activeTab === 'capacity' && <CapacityView />}
       </div>
     </div>
   );

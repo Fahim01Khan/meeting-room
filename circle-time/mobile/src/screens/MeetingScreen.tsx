@@ -126,7 +126,7 @@ export const MeetingScreen: React.FC = () => {
             <View style={styles.meetingDetails}>
               <Text style={styles.meetingTitle}>{meeting.title}</Text>
               <Text style={styles.meetingOrganizer}>
-                Organized by {meeting.organizer}
+                Organized by {meeting.organizer || 'Kiosk User'}
               </Text>
 
               {/* Attendees */}
@@ -196,7 +196,7 @@ export const MeetingScreen: React.FC = () => {
       <View style={styles.meetingDetailsPortrait}>
         <Text style={styles.meetingTitle}>{meeting.title}</Text>
         <Text style={styles.meetingOrganizer}>
-          Organized by {meeting.organizer}
+          Organized by {meeting.organizer || 'Kiosk User'}
         </Text>
         <Text style={styles.meetingTimePortrait}>
           {formatTime(meeting.startTime)} - {formatTime(meeting.endTime)}

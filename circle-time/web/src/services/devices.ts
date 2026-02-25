@@ -33,3 +33,7 @@ export const pairDevice = async (
   });
   return res.data;
 };
+
+export const deleteDevice = async (deviceId: string): Promise<void> => {
+  await apiClient.delete(`/panel/devices/${deviceId}`);
+};

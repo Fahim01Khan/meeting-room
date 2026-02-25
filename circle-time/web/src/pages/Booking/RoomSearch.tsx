@@ -109,6 +109,7 @@ export const RoomSearch: React.FC<RoomSearchProps> = ({ onRoomSelect }) => {
     fontSize: typography.fontSize.sm,
     color: colors.text,
     backgroundColor: colors.background,
+    cursor: 'pointer',
   };
 
   const searchInputStyle: React.CSSProperties = {

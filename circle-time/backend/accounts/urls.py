@@ -5,6 +5,7 @@ from accounts.views import (
     oidc_login_view,
     oidc_callback_view,
     list_users,
+    delete_user,
     send_invite,
     accept_invite,
     validate_invite_token,
@@ -20,6 +21,7 @@ urlpatterns = [
     path("me", me_view, name="auth-me"),
     # User management (admin)
     path("users", list_users, name="auth-users"),
+    path("users/<uuid:user_id>", delete_user, name="auth-delete-user"),
     # Invitation flow
     path("invite", send_invite, name="auth-invite"),
     path("accept-invite", accept_invite, name="auth-accept-invite"),

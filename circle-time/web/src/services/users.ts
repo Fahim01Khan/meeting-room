@@ -60,6 +60,10 @@ export const fetchUsers = async (): Promise<UserRecord[]> => {
   return res.data;
 };
 
+export const deleteUser = async (userId: string): Promise<void> => {
+  await apiClient.delete(`/auth/users/${userId}`);
+};
+
 export const fetchInvitations = async (): Promise<InvitationRecord[]> => {
   const res = await apiClient.get<InvitationRecord[]>("/auth/invites");
   return res.data;

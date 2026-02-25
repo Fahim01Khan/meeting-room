@@ -25,10 +25,20 @@ from panel.models import PairingCode, DeviceRegistration
 
 def _meeting_to_mobile(booking):
     """Convert a Booking ORM instance to the mobile Meeting shape."""
+    # Derive a display name for the organizer
+    organizer = booking.organizer
+    if organizer.email == "kiosk@circletime.io":
+        organizer_name = "Kiosk User"
+    else:
+        organizer_name = (
+            organizer.name
+            or organizer.email.split("@")[0].title()
+        )
+
     return {
         "id": str(booking.id),
         "title": booking.title,
-        "organizer": booking.organizer.name,          # string, NOT User object
+        "organizer": organizer_name,
         "organizerEmail": booking.organizer.email,
         "startTime": booking.start_time.isoformat(),
         "endTime": booking.end_time.isoformat(),
@@ -388,3 +398,29 @@ def list_devices(request):
     ]
 
     return Response({"success": True, "data": data})
+
+
+@api_view(["DELETE"])
+@permission_classes([IsAuthenticated])
+def delete_device(request, device_id):
+    """
+    DELETE /api/panel/devices/<uuid:device_id>
+    Unpair a device. Admin only.
+    """
+    if request.user.role != "admin":
+        return Response(
+            {"success": False, "message": "Admin access required"},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
+    try:
+        device = DeviceRegistration.objects.get(id=device_id)
+    except DeviceRegistration.DoesNotExist:
+        return Response(
+            {"success": False, "message": "Device not found"},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    device.delete()
+
+    return Response({"success": True}, status=status.HTTP_200_OK)

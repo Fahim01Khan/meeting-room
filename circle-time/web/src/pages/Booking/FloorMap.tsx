@@ -95,7 +95,7 @@ export const FloorMap: React.FC<FloorMapProps> = ({ onRoomSelect }) => {
   const svgContainerStyle: React.CSSProperties = {
     backgroundColor: colors.background,
     borderRadius: borderRadius.md,
-    overflow: 'hidden',
+    overflow: 'visible',
   };
 
   const tooltipStyle: React.CSSProperties = {
@@ -149,7 +149,7 @@ export const FloorMap: React.FC<FloorMapProps> = ({ onRoomSelect }) => {
         name: r.name,
         x: 50 + col * 150,
         y: 50 + row * 110,
-        width: col === 2 ? 70 : 120,
+        width: 120,
         height: 80,
         status: r.status,
         raw: r,
@@ -229,7 +229,7 @@ export const FloorMap: React.FC<FloorMapProps> = ({ onRoomSelect }) => {
           <svg
             width="100%"
             height="400"
-            viewBox="0 0 500 300"
+            viewBox="0 0 500 310"
             preserveAspectRatio="xMidYMid meet"
           >
             {/* Floor outline */}
@@ -276,10 +276,11 @@ export const FloorMap: React.FC<FloorMapProps> = ({ onRoomSelect }) => {
                   y={room.y + room.height / 2}
                   textAnchor="middle"
                   dominantBaseline="middle"
-                  fontSize="11"
+                  fontSize="10"
                   fill={colors.text}
+                  style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}
                 >
-                  {room.name}
+                  {room.name.length > 14 ? room.name.slice(0, 13) + '…' : room.name}
                 </text>
                 <circle
                   cx={room.x + room.width - 12}

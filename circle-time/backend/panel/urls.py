@@ -7,6 +7,7 @@ from panel.views import (
     pairing_status,
     pair_device,
     list_devices,
+    delete_device,
 )
 
 urlpatterns = [
@@ -19,4 +20,5 @@ urlpatterns = [
     path("panel/pairing-status/<str:code>", pairing_status, name="panel-pairing-status"),
     path("panel/pair-device", pair_device, name="panel-pair-device"),
     path("panel/devices", list_devices, name="panel-devices"),
+    path("panel/devices/<uuid:device_id>", delete_device, name="panel-delete-device"),
 ]
