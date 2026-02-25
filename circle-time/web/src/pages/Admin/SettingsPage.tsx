@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { fetchSettings, updateSettings } from '../../services/organisation';
 import type { OrgSettings, OrgSettingsUpdate } from '../../services/organisation';
+import { fetchCalendarTokens, getCalendarAuthUrl, disconnectCalendar } from '../../services/calendar';
+import type { CalendarToken } from '../../services/calendar';
 import { ApiClientError } from '../../services/api';
 import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme';
 import { useOrgSettings } from '../../context/OrgSettingsContext';
@@ -35,6 +37,10 @@ export const SettingsPage: React.FC = () => {
   const { refresh: refreshOrgSettings } = useOrgSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [calendarTokens, setCalendarTokens] = useState<CalendarToken[]>([]);
+  const [calendarLoading, setCalendarLoading] = useState(false);
+  const [calendarToast, setCalendarToast] = useState<string | null>(null);
+  const [calendarToastType, setCalendarToastType] = useState<'success' | 'error'>('success');
 
   const loadSettings = useCallback(async () => {
     setIsLoading(true);
@@ -53,6 +59,72 @@ export const SettingsPage: React.FC = () => {
   useEffect(() => {
     loadSettings();
   }, [loadSettings]);
+
+  // ── Calendar tokens ───────────────────────────────────────────────────────
+
+  const loadCalendarTokens = useCallback(async () => {
+    setCalendarLoading(true);
+    try {
+      const tokens = await fetchCalendarTokens();
+      setCalendarTokens(tokens);
+    } catch {
+      // silently fail — calendar section just shows "not connected"
+    } finally {
+      setCalendarLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadCalendarTokens();
+  }, [loadCalendarTokens]);
+
+  // Check URL params for OAuth callback result
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const calendarStatus = params.get('calendar');
+    if (calendarStatus === 'connected') {
+      const provider = params.get('provider') || 'Calendar';
+      const label = provider === 'microsoft' ? 'Microsoft 365' : provider.charAt(0).toUpperCase() + provider.slice(1);
+      setCalendarToast(`${label} Calendar connected successfully!`);
+      setCalendarToastType('success');
+      setTimeout(() => setCalendarToast(null), 5000);
+      window.history.replaceState({}, '', '/admin/settings');
+      loadCalendarTokens();
+    } else if (calendarStatus === 'error') {
+      const reason = params.get('reason') || 'unknown';
+      setCalendarToast(`Calendar connection failed: ${reason}`);
+      setCalendarToastType('error');
+      setTimeout(() => setCalendarToast(null), 5000);
+      window.history.replaceState({}, '', '/admin/settings');
+    }
+  }, [loadCalendarTokens]);
+
+  const handleConnect = async (provider: string) => {
+    try {
+      const { authUrl } = await getCalendarAuthUrl(provider);
+      window.location.href = authUrl;
+    } catch {
+      setCalendarToast(`Failed to get ${provider} auth URL`);
+      setCalendarToastType('error');
+      setTimeout(() => setCalendarToast(null), 5000);
+    }
+  };
+
+  const handleDisconnect = async (provider: string) => {
+    const label = provider === 'microsoft' ? 'Microsoft 365' : provider.charAt(0).toUpperCase() + provider.slice(1);
+    if (!window.confirm(`Disconnect ${label} Calendar?`)) return;
+    try {
+      await disconnectCalendar(provider);
+      await loadCalendarTokens();
+      setCalendarToast(`${label} Calendar disconnected`);
+      setCalendarToastType('success');
+      setTimeout(() => setCalendarToast(null), 3000);
+    } catch {
+      setCalendarToast(`Failed to disconnect ${label}`);
+      setCalendarToastType('error');
+      setTimeout(() => setCalendarToast(null), 5000);
+    }
+  };
 
   // Detect if draft differs from saved
   const isDirty = draft && saved && JSON.stringify(draft) !== JSON.stringify(saved);
@@ -486,7 +558,112 @@ export const SettingsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* ── Section 3: Business Hours ─────────────────────────────────── */}
+      {/* ── Section 3: Calendar Integration ───────────────────────────── */}
+      <div style={sectionCardStyle}>
+        <h2 style={sectionTitleStyle}>Calendar Integration</h2>
+
+        {calendarLoading ? (
+          <p style={{ color: colors.textSecondary, fontSize: typography.fontSize.sm }}>
+            Loading calendar connections…
+          </p>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.md }}>
+            {([
+              { id: 'google',    label: 'Google Calendar' },
+              { id: 'microsoft', label: 'Microsoft 365' },
+              { id: 'exchange',  label: 'Microsoft Exchange' },
+              { id: 'zoho',      label: 'Zoho Calendar' },
+            ] as const).map((prov) => {
+              const token = calendarTokens.find((t) => t.provider === prov.id);
+              const connected = !!token?.connected;
+              const expired = !!token?.expired;
+
+              let badgeText = 'Not connected';
+              let badgeColor = colors.textMuted;
+              let badgeBg = colors.backgroundSecondary;
+              if (connected && !expired) {
+                badgeText = 'Connected';
+                badgeColor = '#166534';
+                badgeBg = '#dcfce7';
+              } else if (connected && expired) {
+                badgeText = 'Expired';
+                badgeColor = '#9a3412';
+                badgeBg = '#fed7aa';
+              }
+
+              return (
+                <div
+                  key={prov.id}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: `${spacing.md} ${spacing.lg}`,
+                    border: `1px solid ${colors.border}`,
+                    borderRadius: borderRadius.md,
+                    backgroundColor: colors.background,
+                  }}
+                >
+                  <span style={{ fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.medium, color: colors.text }}>
+                    {prov.label}
+                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: spacing.md }}>
+                    <span
+                      style={{
+                        fontSize: typography.fontSize.xs,
+                        fontWeight: typography.fontWeight.medium,
+                        color: badgeColor,
+                        backgroundColor: badgeBg,
+                        padding: `2px ${spacing.sm}`,
+                        borderRadius: borderRadius.full,
+                      }}
+                    >
+                      {badgeText}
+                    </span>
+                    {connected ? (
+                      <button
+                        type="button"
+                        onClick={() => handleDisconnect(prov.id)}
+                        style={{
+                          padding: `${spacing.xs} ${spacing.md}`,
+                          border: `1px solid ${colors.error}`,
+                          borderRadius: borderRadius.md,
+                          backgroundColor: colors.background,
+                          color: colors.error,
+                          fontSize: typography.fontSize.sm,
+                          fontWeight: typography.fontWeight.medium,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Disconnect
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => handleConnect(prov.id === 'exchange' ? 'microsoft' : prov.id)}
+                        style={{
+                          padding: `${spacing.xs} ${spacing.md}`,
+                          border: `1px solid ${colors.primary}`,
+                          borderRadius: borderRadius.md,
+                          backgroundColor: colors.primary,
+                          color: '#fff',
+                          fontSize: typography.fontSize.sm,
+                          fontWeight: typography.fontWeight.medium,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Connect
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* ── Section 4: Business Hours ─────────────────────────────────── */}
       <div style={sectionCardStyle}>
         <h2 style={sectionTitleStyle}>Business Hours</h2>
 
@@ -578,6 +755,17 @@ export const SettingsPage: React.FC = () => {
       {showSuccess && (
         <div style={toastStyle}>
           ✓ Settings saved
+        </div>
+      )}
+
+      {/* ── Calendar toast ─────────────────────────────────────────────── */}
+      {calendarToast && (
+        <div style={{
+          ...toastStyle,
+          backgroundColor: calendarToastType === 'success' ? colors.success : colors.error,
+          bottom: showSuccess ? `calc(${spacing.xl} + 56px)` : spacing.xl,
+        }}>
+          {calendarToastType === 'success' ? '✓' : '✕'} {calendarToast}
         </div>
       )}
     </div>

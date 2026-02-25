@@ -517,12 +517,104 @@ def list_calendar_tokens(request):
             "calendarId": t.calendar_id,
             "tokenExpiry": t.token_expiry.isoformat() if t.token_expiry else None,
             "connected": True,
+            "expired": t.token_expiry < timezone.now() if t.token_expiry else False,
         })
 
     return Response(
         {"success": True, "data": data},
         status=status.HTTP_200_OK,
     )
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def get_auth_url(request, provider):
+    """
+    GET /api/auth/calendar-tokens/<provider>/auth-url
+    Returns the OAuth URL to redirect the user to.
+    Query param: state (optional, for tracking)
+    """
+    from accounts.oauth_providers import build_auth_url
+
+    valid_providers = ['google', 'microsoft', 'zoho']
+    if provider not in valid_providers:
+        return Response(
+            {"success": False, "message": f"Unknown provider: {provider}"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    state = request.query_params.get('state', secrets.token_urlsafe(16))
+    try:
+        url = build_auth_url(provider, state)
+        return Response({"success": True, "data": {"authUrl": url, "state": state}})
+    except Exception as e:
+        logger.error(f"Auth URL error for {provider}: {e}")
+        return Response(
+            {"success": False, "message": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def calendar_token_callback(request):
+    """
+    GET /api/auth/calendar-tokens/callback
+    Handles the OAuth redirect from providers.
+    Exchanges code for tokens, saves to DB, redirects to frontend.
+    """
+    from django.shortcuts import redirect as http_redirect
+    from datetime import timedelta
+    from accounts.oauth_providers import exchange_code_for_tokens
+
+    code = request.query_params.get('code')
+    state = request.query_params.get('state', '')
+    error = request.query_params.get('error')
+
+    frontend_url = settings.FRONTEND_URL
+
+    if error:
+        return http_redirect(f"{frontend_url}/admin/settings?calendar=error&reason={error}")
+
+    if not code:
+        return http_redirect(f"{frontend_url}/admin/settings?calendar=error&reason=no_code")
+
+    # State format: "provider:random_state"
+    provider = state.split(':')[0] if ':' in state else None
+    if not provider:
+        return http_redirect(f"{frontend_url}/admin/settings?calendar=error&reason=invalid_state")
+
+    try:
+        token_data = exchange_code_for_tokens(provider, code)
+    except Exception as e:
+        logger.error(f"Token exchange failed for {provider}: {e}")
+        return http_redirect(f"{frontend_url}/admin/settings?calendar=error&reason=token_exchange")
+
+    # For now, save against the first admin user
+    # (tablet-initiated OAuth doesn't have a user session)
+    # In production this would use the state param to link to a user
+    admin_user = User.objects.filter(role='admin').first()
+    if not admin_user:
+        return http_redirect(f"{frontend_url}/admin/settings?calendar=error&reason=no_admin")
+
+    # Calculate expiry
+    expires_in = token_data.get('expires_in', 3600)
+    token_expiry = timezone.now() + timedelta(seconds=expires_in)
+
+    # Save or update token
+    CalendarToken.objects.update_or_create(
+        user=admin_user,
+        provider=provider,
+        defaults={
+            'access_token':  token_data.get('access_token', ''),
+            'refresh_token': token_data.get('refresh_token', ''),
+            'token_expiry':  token_expiry,
+            'scope':         token_data.get('scope', ''),
+        }
+    )
+
+    logger.info(f"Calendar connected: {provider} for {admin_user.email}")
+    return http_redirect(f"{frontend_url}/admin/settings?calendar=connected&provider={provider}")
 
 
 @api_view(["DELETE"])
@@ -552,18 +644,4 @@ def disconnect_calendar_token(request, provider):
     return Response(
         {"success": True},
         status=status.HTTP_200_OK,
-    )
-
-
-@api_view(["POST"])
-@permission_classes([AllowAny])
-def calendar_token_callback(request):
-    """
-    POST /api/auth/calendar-tokens/callback
-    OAuth callback stub — will be wired up when OAuth credentials are registered.
-    Body: { provider, code, state, redirectUri }
-    """
-    return Response(
-        {"success": False, "message": "OAuth not yet configured for this provider"},
-        status=status.HTTP_501_NOT_IMPLEMENTED,
     )

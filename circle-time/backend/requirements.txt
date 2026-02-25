@@ -4,8 +4,12 @@ Django==6.0.2
 django-cors-headers==4.9.0
 djangorestframework==3.16.1
 djangorestframework_simplejwt==5.5.1
+google-auth==2.48.0
+google-auth-oauthlib==1.2.4
+msal==1.35.0
 psycopg2-binary==2.9.11
 PyJWT==2.11.0
 pytz==2025.1
+requests-oauthlib==2.0.0
 sqlparse==0.5.5
 tzdata==2025.3

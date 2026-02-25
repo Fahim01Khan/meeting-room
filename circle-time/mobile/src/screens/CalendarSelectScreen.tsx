@@ -6,12 +6,14 @@ import {
   Text,
   TouchableOpacity,
   Alert,
+  Linking,
   StyleSheet,
   useWindowDimensions,
 } from 'react-native';
 import { colors, typography, spacing, borderRadius } from '../styles/theme';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { useRoomState } from '../context/RoomStateContext';
+import { getCalendarAuthUrl } from '../services/api';
 
 // ── Provider definitions ──────────────────────────────────────────────────────
 
@@ -76,12 +78,25 @@ export const CalendarSelectScreen: React.FC = () => {
     });
   };
 
-  const handleConnect = () => {
-    Alert.alert(
-      'Coming Soon',
-      'Calendar sync coming soon. You can connect calendars later in Settings.',
-      [{ text: 'OK', onPress: () => setCurrentScreen('idle') }],
-    );
+  const handleConnect = async () => {
+    if (selected.size === 0) {
+      setCurrentScreen('idle');
+      return;
+    }
+    // Connect first selected provider (multi-provider can be done one at a time)
+    const provider = Array.from(selected)[0];
+    // Map 'exchange' to 'microsoft' for OAuth
+    const oauthProvider = (provider === 'exchange' ? 'microsoft' : provider) as 'google' | 'microsoft' | 'zoho';
+    const url = await getCalendarAuthUrl(oauthProvider);
+    if (url) {
+      await Linking.openURL(url);
+      // The OAuth flow happens in the device browser
+      // When complete, backend redirects to frontend settings page
+      // Tablet returns to idle after a delay
+      setTimeout(() => setCurrentScreen('idle'), 3000);
+    } else {
+      Alert.alert('Error', 'Could not get calendar URL. Try again later.');
+    }
   };
 
   const handleSkip = () => {

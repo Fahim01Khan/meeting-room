@@ -82,7 +82,14 @@ def _update_settings(request):
 
     if "logoUrl" in data:
         val = data["logoUrl"]
-        obj.logo_url = val if val else None
+        if val and isinstance(val, str) and len(val) > 0:
+            # Accept both regular URLs and base64 data URIs
+            if val.startswith('data:image/') or val.startswith('http://') or val.startswith('https://'):
+                obj.logo_url = val
+            else:
+                errors["logoUrl"] = "Must be a valid URL or base64 image data URI."
+        else:
+            obj.logo_url = None
 
     if "checkinWindowMinutes" in data:
         try:

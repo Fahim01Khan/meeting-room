@@ -15,7 +15,7 @@ class OrganisationSettings(models.Model):
         default="#1E8ACC",
         help_text="Hex colour including #, e.g. #1E8ACC",
     )
-    logo_url = models.URLField(max_length=500, null=True, blank=True)
+    logo_url = models.TextField(null=True, blank=True, help_text="URL or base64 data URI for the logo")
 
     # ── Check-in settings ────────────────────────────────────────────────────
     checkin_window_minutes = models.IntegerField(

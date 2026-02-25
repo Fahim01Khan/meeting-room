@@ -12,6 +12,7 @@ from accounts.views import (
     list_invitations,
     cancel_invitation,
     list_calendar_tokens,
+    get_auth_url,
     disconnect_calendar_token,
     calendar_token_callback,
 )
@@ -31,6 +32,7 @@ urlpatterns = [
     # Calendar token management
     path("calendar-tokens", list_calendar_tokens, name="auth-calendar-tokens"),
     path("calendar-tokens/callback", calendar_token_callback, name="auth-calendar-token-callback"),
+    path("calendar-tokens/<str:provider>/auth-url", get_auth_url, name="auth-calendar-auth-url"),
     path("calendar-tokens/<str:provider>", disconnect_calendar_token, name="auth-disconnect-calendar"),
     # OIDC/SAML skeleton (future SSO — mints JWT after callback)
     path("oidc/login", oidc_login_view, name="auth-oidc-login"),

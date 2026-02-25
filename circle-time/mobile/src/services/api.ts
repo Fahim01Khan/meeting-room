@@ -114,6 +114,24 @@ export const fetchOrgSettings = async (): Promise<OrgSettingsResult | null> => {
   }
 };
 
+// ---------------------------------------------------------------------------
+// Calendar OAuth
+// ---------------------------------------------------------------------------
+
+export const getCalendarAuthUrl = async (
+  provider: "google" | "microsoft" | "zoho",
+): Promise<string | null> => {
+  try {
+    const res = await fetch(
+      `${API_BASE_URL}/auth/calendar-tokens/${provider}/auth-url`,
+    );
+    const json = await res.json();
+    return json.success ? json.data.authUrl : null;
+  } catch {
+    return null;
+  }
+};
+
 export const reportRoomIssue = async (
   roomId: string,
   issue: string,

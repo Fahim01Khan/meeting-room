@@ -166,3 +166,19 @@ FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:5173")
 # Fixture directories
 # ---------------------------------------------------------------------------
 FIXTURE_DIRS = [BASE_DIR / "fixtures"]
+
+# ---------------------------------------------------------------------------
+# Calendar OAuth
+# ---------------------------------------------------------------------------
+GOOGLE_CLIENT_ID     = os.environ.get('GOOGLE_CLIENT_ID', '')
+GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET', '')
+MICROSOFT_CLIENT_ID     = os.environ.get('MICROSOFT_CLIENT_ID', '')
+MICROSOFT_CLIENT_SECRET = os.environ.get('MICROSOFT_CLIENT_SECRET', '')
+MICROSOFT_TENANT_ID     = os.environ.get('MICROSOFT_TENANT_ID', 'common')
+ZOHO_CLIENT_ID     = os.environ.get('ZOHO_CLIENT_ID', '')
+ZOHO_CLIENT_SECRET = os.environ.get('ZOHO_CLIENT_SECRET', '')
+
+CALENDAR_REDIRECT_URI = os.environ.get(
+    'CALENDAR_REDIRECT_URI',
+    'http://localhost:8000/api/auth/calendar-tokens/callback'
+)
