@@ -20,11 +20,22 @@ const API_BASE_URL: string =
 
 export const fetchRoomState = async (
   roomId: string,
+  deviceSerial?: string | null,
 ): Promise<RoomState | null> => {
   try {
-    const res = await fetch(`${API_BASE_URL}/rooms/${roomId}/state`);
+    const headers: Record<string, string> = {};
+    if (deviceSerial) {
+      headers["X-Device-Serial"] = deviceSerial;
+    }
+    const res = await fetch(`${API_BASE_URL}/rooms/${roomId}/state`, {
+      headers,
+    });
     if (!res.ok) return null;
     const json = await res.json();
+    if (json.success && json.unpaired) {
+      // Signal that this device has been unpaired
+      return { unpaired: true } as unknown as RoomState;
+    }
     return json.success ? (json.data as RoomState) : null;
   } catch (err) {
     console.error("fetchRoomState error:", err);

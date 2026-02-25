@@ -74,7 +74,15 @@ def room_state(request, room_id):
     """
     Composite room-state endpoint for mobile panel.
     Returns RoomState with mobile enums and organizer as string.
+    If X-Device-Serial header is provided and that device has been
+    deleted/unpaired, returns { success: true, unpaired: true }.
     """
+    # ── Unpair detection ─────────────────────────────────────────────────
+    device_serial = request.META.get("HTTP_X_DEVICE_SERIAL")
+    if device_serial:
+        if not DeviceRegistration.objects.filter(device_serial=device_serial).exists():
+            return Response({"success": True, "unpaired": True})
+
     try:
         room = Room.objects.get(id=room_id)
     except Room.DoesNotExist:

@@ -8,6 +8,7 @@ import { subscribeToRoomUpdates, startPolling, stopPolling } from '../services/r
 import { cacheRoomState, getCachedRoomState } from '../services/cache';
 
 const ROOM_ID_STORAGE_KEY = '@circle_time:room_id';
+const DEVICE_SERIAL_STORAGE_KEY = '@circle_time:device_serial';
 
 interface RoomStateContextValue {
   roomState: RoomState | null;
@@ -15,6 +16,7 @@ interface RoomStateContextValue {
   isLoading: boolean;
   error: string | null;
   roomId: string | null;
+  deviceSerial: string | null;
   orgName: string;
   primaryColour: string;
   logoUrl: string | null;
@@ -24,7 +26,7 @@ interface RoomStateContextValue {
   handleCheckIn: () => Promise<boolean>;
   handleEndEarly: () => Promise<boolean>;
   handleAdHocBooking: (durationMinutes: number) => Promise<boolean>;
-  handlePaired: (newRoomId: string) => Promise<void>;
+  handlePaired: (newRoomId: string, deviceSerial: string) => Promise<void>;
   clearPairing: () => Promise<void>;
 }
 
@@ -36,6 +38,7 @@ interface RoomStateProviderProps {
 
 export const RoomStateProvider: React.FC<RoomStateProviderProps> = ({ children }) => {
   const [roomId, setRoomId] = useState<string | null>(null);
+  const [deviceSerial, setDeviceSerial] = useState<string | null>(null);
   const [roomState, setRoomState] = useState<RoomState | null>(null);
   const [currentScreen, setCurrentScreen] = useState<ScreenType>('pairing');
   const [isLoading, setIsLoading] = useState(true);
@@ -50,13 +53,23 @@ export const RoomStateProvider: React.FC<RoomStateProviderProps> = ({ children }
   const currentScreenRef = useRef<ScreenType>('pairing');
   currentScreenRef.current = currentScreen;
 
+  // Track fresh pairing flow so the mount useEffect doesn't stomp
+  // 'calendar-select' back to 'idle' when it reads the just-saved roomId.
+  const isOnboarding = useRef(false);
+
   // ── On mount: load saved roomId from AsyncStorage + fetch org settings ─
   useEffect(() => {
-    AsyncStorage.getItem(ROOM_ID_STORAGE_KEY)
-      .then((savedId) => {
+    Promise.all([
+      AsyncStorage.getItem(ROOM_ID_STORAGE_KEY),
+      AsyncStorage.getItem(DEVICE_SERIAL_STORAGE_KEY),
+    ])
+      .then(([savedId, savedSerial]) => {
         if (savedId) {
           setRoomId(savedId);
-          setCurrentScreen('idle');
+          setDeviceSerial(savedSerial);
+          if (!isOnboarding.current) {
+            setCurrentScreen('idle');
+          }
         } else {
           // No paired room yet — show pairing screen
           setCurrentScreen('pairing');
@@ -82,17 +95,21 @@ export const RoomStateProvider: React.FC<RoomStateProviderProps> = ({ children }
   }, []);
 
   // ── Called by PairingScreen when admin pairs the device ────────────────
-  const handlePaired = useCallback(async (newRoomId: string) => {
+  const handlePaired = useCallback(async (newRoomId: string, serial: string) => {
+    isOnboarding.current = true;
     await AsyncStorage.setItem(ROOM_ID_STORAGE_KEY, newRoomId);
+    await AsyncStorage.setItem(DEVICE_SERIAL_STORAGE_KEY, serial);
     setRoomId(newRoomId);
+    setDeviceSerial(serial);
     setCurrentScreen('calendar-select');
   }, []);
 
   // ── Clear the pairing (reset to pairing screen) ───────────────────────
   const clearPairing = useCallback(async () => {
-    await AsyncStorage.removeItem(ROOM_ID_STORAGE_KEY);
+    await AsyncStorage.multiRemove([ROOM_ID_STORAGE_KEY, DEVICE_SERIAL_STORAGE_KEY]);
     stopPolling();
     setRoomId(null);
+    setDeviceSerial(null);
     setRoomState(null);
     setCurrentScreen('pairing');
   }, []);
@@ -103,9 +120,19 @@ export const RoomStateProvider: React.FC<RoomStateProviderProps> = ({ children }
     setError(null);
 
     try {
-      const state = await fetchRoomState(roomId);
+      const state = await fetchRoomState(roomId, deviceSerial);
 
       if (state) {
+        // Check for unpaired signal
+        if ((state as unknown as { unpaired?: boolean }).unpaired) {
+          await AsyncStorage.multiRemove([ROOM_ID_STORAGE_KEY, DEVICE_SERIAL_STORAGE_KEY]);
+          stopPolling();
+          setRoomId(null);
+          setDeviceSerial(null);
+          setRoomState(null);
+          setCurrentScreen('pairing');
+          return;
+        }
         setRoomState(state);
         await cacheRoomState(roomId, state);
       } else {
@@ -125,7 +152,7 @@ export const RoomStateProvider: React.FC<RoomStateProviderProps> = ({ children }
     } finally {
       setIsLoading(false);
     }
-  }, [roomId]);
+  }, [roomId, deviceSerial]);
 
   const handleCheckIn = useCallback(async (): Promise<boolean> => {
     if (!roomState?.currentMeeting) return false;
@@ -235,13 +262,13 @@ export const RoomStateProvider: React.FC<RoomStateProviderProps> = ({ children }
       cacheRoomState(roomId, state);
     });
 
-    startPolling(roomId);
+    startPolling(roomId, 30000, deviceSerial);
 
     return () => {
       unsubscribe();
       stopPolling();
     };
-  }, [roomId]);
+  }, [roomId, deviceSerial]);
 
   // ── Initial room state load when roomId is set ────────────────────────
   useEffect(() => {
@@ -260,7 +287,10 @@ export const RoomStateProvider: React.FC<RoomStateProviderProps> = ({ children }
       } else {
         setCurrentScreen('meeting');
       }
-    } else if (currentScreenRef.current !== 'adHocBooking') {
+    } else if (
+      currentScreenRef.current !== 'adHocBooking' &&
+      currentScreenRef.current !== 'calendar-select'
+    ) {
       setCurrentScreen('idle');
     }
   }, [roomState]);
@@ -271,6 +301,7 @@ export const RoomStateProvider: React.FC<RoomStateProviderProps> = ({ children }
     isLoading,
     error,
     roomId,
+    deviceSerial,
     orgName,
     primaryColour,
     logoUrl,

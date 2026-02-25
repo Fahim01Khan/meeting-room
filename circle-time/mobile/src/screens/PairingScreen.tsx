@@ -4,8 +4,8 @@ import { colors, spacing, typography, borderRadius } from '../styles/theme';
 import { generatePairingCode, pollPairingStatus } from '../services/api';
 
 interface PairingScreenProps {
-  /** Called when pairing completes — parent should persist roomId and switch screen. */
-  onPaired: (roomId: string) => void;
+  /** Called when pairing completes — parent should persist roomId + serial and switch screen. */
+  onPaired: (roomId: string, deviceSerial: string) => void;
 }
 
 export const PairingScreen: React.FC<PairingScreenProps> = ({ onPaired }) => {
@@ -77,7 +77,7 @@ export const PairingScreen: React.FC<PairingScreenProps> = ({ onPaired }) => {
       if (!result.success) return;
 
       if (result.data?.status === 'paired' && result.data.roomId) {
-        onPaired(result.data.roomId);
+        onPaired(result.data.roomId, deviceSerialRef.current);
       } else if (result.data?.status === 'expired') {
         setStatus('expired');
       }
