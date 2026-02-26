@@ -1,5 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Calendar, Tablet, CheckCircle } from 'lucide-react';
 import { colors } from '../styles/theme';
 
 const PRIMARY = colors.primary;
@@ -160,9 +161,10 @@ export const LandingPage: React.FC = () => {
     textAlign: 'center',
   };
 
-  const featureEmoji: React.CSSProperties = {
-    fontSize: '40px',
+  const featureIconStyle: React.CSSProperties = {
     marginBottom: '16px',
+    display: 'flex',
+    justifyContent: 'center',
   };
 
   const featureTitle: React.CSSProperties = {
@@ -285,7 +287,9 @@ export const LandingPage: React.FC = () => {
         <h2 style={featuresSectionTitle}>Everything your team needs</h2>
         <div style={featuresGrid}>
           <div style={featureCard}>
-            <div style={featureEmoji}>📅</div>
+            <div style={featureIconStyle}>
+              <Calendar width={40} height={40} color="#1E8ACC" />
+            </div>
             <h3 style={featureTitle}>Smart Booking</h3>
             <p style={featureDesc}>
               Find and book available rooms instantly.
@@ -293,7 +297,9 @@ export const LandingPage: React.FC = () => {
             </p>
           </div>
           <div style={featureCard}>
-            <div style={featureEmoji}>📱</div>
+            <div style={featureIconStyle}>
+              <Tablet width={40} height={40} color="#1E8ACC" />
+            </div>
             <h3 style={featureTitle}>Door Panel Display</h3>
             <p style={featureDesc}>
               Each room has a dedicated tablet showing
@@ -301,7 +307,9 @@ export const LandingPage: React.FC = () => {
             </p>
           </div>
           <div style={featureCard}>
-            <div style={featureEmoji}>✅</div>
+            <div style={featureIconStyle}>
+              <CheckCircle width={40} height={40} color="#1E8ACC" />
+            </div>
             <h3 style={featureTitle}>Auto Check-in</h3>
             <p style={featureDesc}>
               No more ghost bookings. Rooms are
