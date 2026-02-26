@@ -2,8 +2,12 @@ import os
 from pathlib import Path
 from datetime import timedelta
 import dj_database_url
+from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Load .env file from the backend root directory
+load_dotenv(BASE_DIR / ".env")
 
 # ---------------------------------------------------------------------------
 # Environment helpers

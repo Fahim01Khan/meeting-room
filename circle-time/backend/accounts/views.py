@@ -271,7 +271,7 @@ def send_invite(request):
     frontend_url = getattr(settings, "FRONTEND_URL", "http://localhost:5173")
     invite_link = f"{frontend_url}/accept-invite?token={invitation.token}"
     subject = "You've been invited to Circle Time"
-    body = (
+    plain_body = (
         f"Hi,\n\n"
         f"You've been invited to join Circle Time as a {invitation.role}.\n\n"
         f"Click the link below to set up your account:\n"
@@ -279,13 +279,55 @@ def send_invite(request):
         f"This link expires in 48 hours.\n\n"
         f"— The Circle Time Team"
     )
+    html_body = f"""<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background:#F3F4F6;font-family:Arial,Helvetica,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#F3F4F6;padding:40px 0;">
+    <tr><td align="center">
+      <table width="480" cellpadding="0" cellspacing="0" style="background:#FFFFFF;border-radius:12px;overflow:hidden;">
+        <tr><td style="background:#6366F1;padding:32px;text-align:center;">
+          <h1 style="margin:0;color:#FFFFFF;font-size:24px;">Circle Time</h1>
+        </td></tr>
+        <tr><td style="padding:32px;">
+          <h2 style="margin:0 0 8px;color:#111827;font-size:20px;">You're invited!</h2>
+          <p style="color:#6B7280;font-size:15px;line-height:1.6;">
+            You've been invited to join <strong>Circle Time</strong> as
+            <strong>{invitation.get_role_display()}</strong>.
+          </p>
+          <table width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0;">
+            <tr><td align="center">
+              <a href="{invite_link}"
+                 style="display:inline-block;padding:14px 32px;background:#6366F1;color:#FFFFFF;
+                        text-decoration:none;border-radius:8px;font-size:16px;font-weight:600;">
+                Accept Invitation
+              </a>
+            </td></tr>
+          </table>
+          <p style="color:#9CA3AF;font-size:13px;line-height:1.5;">
+            This link expires in <strong>48 hours</strong>. If the button doesn't work,
+            copy and paste this URL into your browser:
+          </p>
+          <p style="color:#6366F1;font-size:13px;word-break:break-all;">{invite_link}</p>
+        </td></tr>
+        <tr><td style="padding:24px 32px;background:#F9FAFB;text-align:center;">
+          <p style="margin:0;color:#9CA3AF;font-size:12px;">
+            &copy; Circle Time &bull; Meeting-room booking made simple
+          </p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>"""
 
     try:
         send_mail(
             subject,
-            body,
+            plain_body,
             settings.DEFAULT_FROM_EMAIL,
             [email],
+            html_message=html_body,
             fail_silently=False,
         )
     except Exception as exc:
