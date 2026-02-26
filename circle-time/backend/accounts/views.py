@@ -545,13 +545,18 @@ def cancel_invitation(request, invitation_id):
 # ---------------------------------------------------------------------------
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def list_calendar_tokens(request):
     """
     GET /api/auth/calendar-tokens
-    Returns the current user's connected calendar providers.
+    Returns connected calendar providers.
+    If authenticated, returns only the current user's tokens.
+    If unauthenticated (e.g. tablet onboarding), returns all tokens.
     """
-    tokens = CalendarToken.objects.filter(user=request.user)
+    if request.user and request.user.is_authenticated:
+        tokens = CalendarToken.objects.filter(user=request.user)
+    else:
+        tokens = CalendarToken.objects.all()
     data = []
     for t in tokens:
         data.append({

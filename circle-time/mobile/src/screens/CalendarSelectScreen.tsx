@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -9,11 +9,12 @@ import {
   Linking,
   StyleSheet,
   useWindowDimensions,
+  ActivityIndicator,
 } from 'react-native';
 import { colors, typography, spacing, borderRadius } from '../styles/theme';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { useRoomState } from '../context/RoomStateContext';
-import { getCalendarAuthUrl } from '../services/api';
+import { getCalendarAuthUrl, checkCalendarConnected } from '../services/api';
 
 // ── Provider definitions ──────────────────────────────────────────────────────
 
@@ -58,6 +59,8 @@ const PROVIDERS: CalendarProvider[] = [
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
+type OAuthPhase = 'select' | 'waiting' | 'connected' | 'timeout';
+
 export const CalendarSelectScreen: React.FC = () => {
   const { setCurrentScreen, primaryColour } = useRoomState();
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -66,7 +69,52 @@ export const CalendarSelectScreen: React.FC = () => {
 
   const accent = primaryColour || colors.primary;
 
+  // OAuth polling state
+  const [phase, setPhase] = useState<OAuthPhase>('select');
+  const [connectingProvider, setConnectingProvider] = useState<string | null>(null);
+  const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pollDeadlineRef = useRef<number>(0);
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+    };
+  }, []);
+
+  const stopPolling = useCallback(() => {
+    if (pollTimerRef.current) {
+      clearInterval(pollTimerRef.current);
+      pollTimerRef.current = null;
+    }
+  }, []);
+
+  const startPolling = useCallback((provider: string) => {
+    setPhase('waiting');
+    setConnectingProvider(provider);
+    pollDeadlineRef.current = Date.now() + 90_000; // 90 seconds
+
+    pollTimerRef.current = setInterval(async () => {
+      // Check timeout
+      if (Date.now() > pollDeadlineRef.current) {
+        stopPolling();
+        setPhase('timeout');
+        return;
+      }
+
+      const oauthProvider = provider === 'exchange' ? 'microsoft' : provider;
+      const connected = await checkCalendarConnected(oauthProvider);
+      if (connected) {
+        stopPolling();
+        setPhase('connected');
+        // Show "Connected!" for 1.5 seconds then go to idle
+        setTimeout(() => setCurrentScreen('idle'), 1500);
+      }
+    }, 3000);
+  }, [stopPolling, setCurrentScreen]);
+
   const toggleProvider = (id: string) => {
+    if (phase !== 'select') return; // Ignore taps while polling
     setSelected((prev) => {
       const next = new Set(prev);
       if (next.has(id)) {
@@ -90,16 +138,20 @@ export const CalendarSelectScreen: React.FC = () => {
     const url = await getCalendarAuthUrl(oauthProvider);
     if (url) {
       await Linking.openURL(url);
-      // The OAuth flow happens in the device browser
-      // When complete, backend redirects to frontend settings page
-      // Tablet returns to idle after a delay
-      setTimeout(() => setCurrentScreen('idle'), 3000);
+      // Start polling for the token instead of a blind setTimeout
+      startPolling(provider);
     } else {
       Alert.alert('Error', 'Could not get calendar URL. Try again later.');
     }
   };
 
+  const handleRetry = () => {
+    setPhase('select');
+    setConnectingProvider(null);
+  };
+
   const handleSkip = () => {
+    stopPolling();
     setCurrentScreen('idle');
   };
 
@@ -136,8 +188,75 @@ export const CalendarSelectScreen: React.FC = () => {
     );
   };
 
+  // ── OAuth status overlay ───────────────────────────────────────────────
+  const renderOAuthStatus = () => {
+    if (phase === 'waiting') {
+      return (
+        <View style={styles.statusOverlay}>
+          <ActivityIndicator size="large" color={accent} />
+          <Text style={[styles.statusTitle, { color: accent }]}>
+            Waiting for calendar connection…
+          </Text>
+          <Text style={styles.statusSubtext}>
+            Complete the sign-in in the browser.{'\n'}
+            This screen will update automatically.
+          </Text>
+          <TouchableOpacity onPress={handleSkip} activeOpacity={0.7} style={styles.skipBtn}>
+            <Text style={[styles.skipText, { color: accent }]}>Skip for now</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    if (phase === 'connected') {
+      return (
+        <View style={styles.statusOverlay}>
+          <Text style={styles.connectedIcon}>✓</Text>
+          <Text style={[styles.statusTitle, { color: colors.success }]}>
+            Connected!
+          </Text>
+        </View>
+      );
+    }
+
+    if (phase === 'timeout') {
+      return (
+        <View style={styles.statusOverlay}>
+          <Text style={styles.timeoutIcon}>⏱</Text>
+          <Text style={[styles.statusTitle, { color: colors.textSecondary }]}>
+            Connection timed out.
+          </Text>
+          <Text style={styles.statusSubtext}>
+            Try again or skip for now.
+          </Text>
+          <PrimaryButton
+            title="Try Again"
+            onPress={handleRetry}
+            variant="primary"
+            size="large"
+            style={{ marginTop: spacing.lg, paddingHorizontal: spacing.xxl }}
+          />
+          <TouchableOpacity onPress={handleSkip} activeOpacity={0.7} style={styles.skipBtn}>
+            <Text style={[styles.skipText, { color: accent }]}>Skip for now</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    return null;
+  };
+
   // ── Landscape layout ──────────────────────────────────────────────────────
   if (isLandscape) {
+    // Show OAuth status overlay when not in select phase
+    if (phase !== 'select') {
+      return (
+        <View style={styles.container}>
+          {renderOAuthStatus()}
+        </View>
+      );
+    }
+
     return (
       <View style={styles.container}>
         <View style={styles.landscapeBody}>
@@ -186,6 +305,16 @@ export const CalendarSelectScreen: React.FC = () => {
   }
 
   // ── Portrait layout ───────────────────────────────────────────────────────
+
+  // Show OAuth status overlay when not in select phase
+  if (phase !== 'select') {
+    return (
+      <View style={[styles.container, styles.portraitWrap, { justifyContent: 'center' }]}>
+        {renderOAuthStatus()}
+      </View>
+    );
+  }
+
   return (
     <View style={[styles.container, styles.portraitWrap]}>
       <View style={styles.portraitHeader}>
@@ -339,6 +468,36 @@ const styles = StyleSheet.create({
   },
   skipBtn: {
     paddingVertical: spacing.sm,
+  },
+
+  /* ── OAuth status overlay ─────────────────────────────────────────────── */
+  statusOverlay: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.xl,
+  },
+  statusTitle: {
+    fontSize: typography.fontSize.xxl,
+    fontWeight: typography.fontWeight.semibold,
+    marginTop: spacing.lg,
+    textAlign: 'center',
+  },
+  statusSubtext: {
+    fontSize: typography.fontSize.lg,
+    fontWeight: typography.fontWeight.light,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginTop: spacing.sm,
+    lineHeight: typography.fontSize.lg * 1.5,
+  },
+  connectedIcon: {
+    fontSize: 64,
+    color: colors.success,
+  },
+  timeoutIcon: {
+    fontSize: 48,
+    color: colors.textSecondary,
   },
 });
 

@@ -143,6 +143,21 @@ export const getCalendarAuthUrl = async (
   }
 };
 
+export const checkCalendarConnected = async (
+  provider: string,
+): Promise<boolean> => {
+  try {
+    const res = await fetch(`${API_BASE_URL}/auth/calendar-tokens`);
+    const json = await res.json();
+    if (!json.success) return false;
+    return json.data.some(
+      (t: { provider: string }) => t.provider === provider,
+    );
+  } catch {
+    return false;
+  }
+};
+
 export const reportRoomIssue = async (
   roomId: string,
   issue: string,
