@@ -3,11 +3,31 @@ import secrets
 
 from django.contrib.auth import authenticate
 from django.conf import settings
-from django.core.mail import send_mail
+from django.core.mail import EmailMultiAlternatives
 from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 from rest_framework.decorators import api_view, permission_classes
+
+
+class _Force8BitEmail(EmailMultiAlternatives):
+    """EmailMultiAlternatives subclass that forces 8bit transfer encoding
+    on every text/* MIME part so quoted-printable never mangles URLs."""
+
+    def message(self):
+        msg = super().message()
+        for part in msg.walk():
+            if part.get_content_maintype() == "text":
+                raw = part.get_payload(decode=True)
+                if raw:
+                    # Surrogate-escape keeps non-ASCII bytes intact through
+                    # BytesGenerator which re-encodes via 'surrogateescape'.
+                    part._payload = raw.decode("ascii", "surrogateescape")
+                    if "Content-Transfer-Encoding" in part:
+                        part.replace_header("Content-Transfer-Encoding", "8bit")
+                    else:
+                        part["Content-Transfer-Encoding"] = "8bit"
+        return msg
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
@@ -323,14 +343,15 @@ def send_invite(request):
 
     email_error = None
     try:
-        send_mail(
-            subject,
-            plain_body,
-            settings.DEFAULT_FROM_EMAIL,
-            [email],
-            html_message=html_body,
-            fail_silently=False,
+        msg = _Force8BitEmail(
+            subject=subject,
+            body=plain_body,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=[email],
         )
+        msg.encoding = "utf-8"
+        msg.attach_alternative(html_body, "text/html")
+        msg.send(fail_silently=False)
     except Exception as exc:
         logger.error("Failed to send invite email to %s: %s", email, exc)
         email_error = str(exc)
