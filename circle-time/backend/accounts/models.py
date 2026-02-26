@@ -63,7 +63,7 @@ class UserInvitation(models.Model):
     )
     role = models.CharField(max_length=10, choices=User.ROLE_CHOICES, default="user")
     department = models.CharField(max_length=255, null=True, blank=True)
-    token = models.CharField(max_length=64, unique=True)
+    token = models.CharField(max_length=128, unique=True)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="pending")
     created_at = models.DateTimeField(auto_now_add=True)
     expires_at = models.DateTimeField()

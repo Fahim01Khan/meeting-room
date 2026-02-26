@@ -26,7 +26,7 @@ urlpatterns = [
     # Invitation flow
     path("invite", send_invite, name="auth-invite"),
     path("accept-invite", accept_invite, name="auth-accept-invite"),
-    path("invite/<str:token>/validate", validate_invite_token, name="auth-validate-invite"),
+    path("invite/validate", validate_invite_token, name="auth-validate-invite"),
     path("invites", list_invitations, name="auth-invitations"),
     path("invites/<uuid:invitation_id>", cancel_invitation, name="auth-cancel-invitation"),
     # Calendar token management

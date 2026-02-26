@@ -263,7 +263,7 @@ def send_invite(request):
         invited_by=request.user,
         role=role,
         department=department,
-        token=secrets.token_urlsafe(48),
+        token=secrets.token_hex(48),
     )
     invitation.save()
 
@@ -445,11 +445,18 @@ def accept_invite(request):
 
 @api_view(["GET"])
 @permission_classes([AllowAny])
-def validate_invite_token(request, token):
+def validate_invite_token(request):
     """
-    GET /api/auth/invite/<token>/validate
+    GET /api/auth/invite/validate?token=<token>
     Validate an invitation token before the user fills out the acceptance form.
     """
+    token = request.query_params.get("token", "").strip()
+    if not token:
+        return Response(
+            {"success": False, "message": "Token is required."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
     try:
         invitation = UserInvitation.objects.get(token=token)
     except UserInvitation.DoesNotExist:

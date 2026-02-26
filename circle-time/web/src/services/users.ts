@@ -84,7 +84,7 @@ export const validateInviteToken = async (
   token: string,
 ): Promise<TokenValidation> => {
   const res = await apiClient.get<TokenValidation>(
-    `/auth/invite/${token}/validate`,
+    `/auth/invite/validate?token=${encodeURIComponent(token)}`,
   );
   return res.data;
 };
