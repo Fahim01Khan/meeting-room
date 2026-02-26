@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, useNavigate, useParams } from '
 import { Layout } from './Layout';
 import { ProtectedRoute } from './ProtectedRoute';
 import { Login } from '../pages/Login';
+import { LandingPage } from '../pages/LandingPage';
 import { RoomSearch } from '../pages/Booking/RoomSearch';
 import { FloorMap } from '../pages/Booking/FloorMap';
 import { RoomDetails } from '../pages/Booking/RoomDetails';
@@ -19,20 +20,19 @@ export const Router: React.FC = () => {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Public routes */}
+        <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<Login />} />
         <Route path="/accept-invite" element={<AcceptInvitePage />} />
         
+        {/* Protected routes */}
         <Route
-          path="/"
           element={
             <ProtectedRoute>
               <Layout />
             </ProtectedRoute>
           }
         >
-          <Route index element={<Navigate to="/rooms" replace />} />
-          
-          {/* Booking Routes */}
           <Route path="rooms" element={<RoomSearchWrapper />} />
           <Route path="rooms/:roomId" element={<RoomDetailsWrapper />} />
           <Route path="floor-map" element={<FloorMapWrapper />} />

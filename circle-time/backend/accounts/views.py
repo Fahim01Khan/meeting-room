@@ -321,6 +321,7 @@ def send_invite(request):
 </body>
 </html>"""
 
+    email_error = None
     try:
         send_mail(
             subject,
@@ -332,16 +333,30 @@ def send_invite(request):
         )
     except Exception as exc:
         logger.error("Failed to send invite email to %s: %s", email, exc)
+        email_error = str(exc)
+
+    response_data = {
+        "id": str(invitation.id),
+        "email": invitation.email,
+        "role": invitation.role,
+        "expiresAt": invitation.expires_at.isoformat(),
+    }
+
+    if email_error:
+        return Response(
+            {
+                "success": True,
+                "data": response_data,
+                "message": f"Invitation created but email failed to send: {email_error}",
+                "emailError": True,
+            },
+            status=status.HTTP_201_CREATED,
+        )
 
     return Response(
         {
             "success": True,
-            "data": {
-                "id": str(invitation.id),
-                "email": invitation.email,
-                "role": invitation.role,
-                "expiresAt": invitation.expires_at.isoformat(),
-            },
+            "data": response_data,
         },
         status=status.HTTP_201_CREATED,
     )

@@ -150,9 +150,7 @@ export const checkCalendarConnected = async (
     const res = await fetch(`${API_BASE_URL}/auth/calendar-tokens`);
     const json = await res.json();
     if (!json.success) return false;
-    return json.data.some(
-      (t: { provider: string }) => t.provider === provider,
-    );
+    return json.data.some((t: { provider: string }) => t.provider === provider);
   } catch {
     return false;
   }
