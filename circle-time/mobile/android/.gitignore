@@ -3,3 +3,8 @@ app/.cxx/
 app/build/
 .gradle/
 build/
+
+# Release keystore (never commit signing credentials)
+circletime-release.keystore
+*.keystore
+!debug.keystore

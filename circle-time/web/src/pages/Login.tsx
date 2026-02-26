@@ -123,12 +123,13 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
     }
 
     try {
-      const { apiClient, setTokens } = await import('../services/api');
-      const res = await apiClient.post<{ access: string; refresh: string; user: { id: string; name: string; email: string } }>(
+      const { apiClient, setTokens, setUser } = await import('../services/api');
+      const res = await apiClient.post<{ access: string; refresh: string; user: { id: string; name: string; email: string; role: string; department?: string | null } }>(
         '/auth/login',
         { email, password },
       );
       setTokens(res.data.access, res.data.refresh);
+      setUser(res.data.user);
       // Navigate to main app
       window.location.href = '/rooms';
     } catch (err: unknown) {

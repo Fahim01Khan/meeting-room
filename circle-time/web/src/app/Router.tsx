@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { Layout } from './Layout';
 import { ProtectedRoute } from './ProtectedRoute';
+import { AdminRoute } from './AdminRoute';
 import { Login } from '../pages/Login';
 import { LandingPage } from '../pages/LandingPage';
 import { RoomSearch } from '../pages/Booking/RoomSearch';
@@ -37,13 +38,13 @@ export const Router: React.FC = () => {
           <Route path="rooms/:roomId" element={<RoomDetailsWrapper />} />
           <Route path="floor-map" element={<FloorMapWrapper />} />
           
-          {/* Admin Routes */}
-          <Route path="admin" element={<Navigate to="/admin/analytics" replace />} />
-          <Route path="admin/analytics" element={<AnalyticsPage />} />
-          <Route path="admin/users" element={<UsersPage />} />
-          <Route path="admin/rooms" element={<RoomsPage />} />
-          <Route path="admin/devices" element={<DevicesPage />} />
-          <Route path="admin/settings" element={<SettingsPage />} />
+          {/* Admin Routes — require role='admin' */}
+          <Route path="admin" element={<AdminRoute><Navigate to="/admin/analytics" replace /></AdminRoute>} />
+          <Route path="admin/analytics" element={<AdminRoute><AnalyticsPage /></AdminRoute>} />
+          <Route path="admin/users" element={<AdminRoute><UsersPage /></AdminRoute>} />
+          <Route path="admin/rooms" element={<AdminRoute><RoomsPage /></AdminRoute>} />
+          <Route path="admin/devices" element={<AdminRoute><DevicesPage /></AdminRoute>} />
+          <Route path="admin/settings" element={<AdminRoute><SettingsPage /></AdminRoute>} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />

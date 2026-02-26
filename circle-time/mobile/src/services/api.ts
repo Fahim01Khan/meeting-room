@@ -15,8 +15,8 @@ import type {
   PairingStatusResult,
 } from "../types/meeting";
 
-const API_BASE_URL: string =
-  ENV_API_BASE_URL || "http://192.168.18.11:8000/api";
+// TODO: Change to production URL before final deployment
+const API_BASE_URL: string = ENV_API_BASE_URL || "http://10.10.30.71:8000/api";
 
 export const fetchRoomState = async (
   roomId: string,

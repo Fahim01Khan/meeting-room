@@ -1,3 +1,28 @@
+/*
+ * ── SUNMI M2 MAX tablet sideload instructions ──────────────────────────
+ *
+ * 1. On the SUNMI tablet:
+ *    Settings → About → tap Build Number 7 times (enables Developer Options)
+ *    Settings → Developer Options → Enable USB Debugging AND Wireless Debugging
+ *
+ * 2. Find tablet IP:
+ *    Settings → WiFi → tap connected network → IP address (e.g. 10.10.30.x)
+ *
+ * 3. On dev machine, connect via ADB over WiFi:
+ *      adb connect <tablet-ip>:5555
+ *      adb devices            # verify tablet shows as connected
+ *
+ * 4. Build the release APK:
+ *      cd mobile/android
+ *      gradlew.bat assembleRelease      # Windows
+ *      ./gradlew assembleRelease        # Mac/Linux
+ *
+ * 5. Install the APK:
+ *      adb install app/build/outputs/apk/release/app-release.apk
+ *
+ * ────────────────────────────────────────────────────────────────────────
+ */
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -44,6 +69,14 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
+        release {
+            if (project.hasProperty('MYAPP_RELEASE_STORE_FILE')) {
+                storeFile file(MYAPP_RELEASE_STORE_FILE)
+                storePassword MYAPP_RELEASE_STORE_PASSWORD
+                keyAlias MYAPP_RELEASE_KEY_ALIAS
+                keyPassword MYAPP_RELEASE_KEY_PASSWORD
+            }
+        }
     }
 
     buildTypes {
@@ -51,7 +84,7 @@ android {
             signingConfig signingConfigs.debug
         }
         release {
-            signingConfig signingConfigs.debug
+            signingConfig signingConfigs.release
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }

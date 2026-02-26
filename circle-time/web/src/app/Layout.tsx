@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { colors, spacing, typography, borderRadius, shadows } from '../styles/theme';
-import { clearTokens, apiClient } from '../services/api';
+import { clearTokens, apiClient, getUser } from '../services/api';
 import { useOrgSettings } from '../context/OrgSettingsContext';
 
 interface NavItem {
@@ -274,6 +274,7 @@ export const Layout: React.FC = () => {
             ))}
           </div>
 
+          {user?.role === 'admin' && (
           <div style={navSectionStyle}>
             <p style={navLabelStyle}>Admin</p>
             {adminNavItems.map((item) => (
@@ -287,6 +288,7 @@ export const Layout: React.FC = () => {
               </Link>
             ))}
           </div>
+          )}
         </nav>
 
         <div style={{ padding: spacing.md, borderTop: `1px solid ${colors.border}` }}>
