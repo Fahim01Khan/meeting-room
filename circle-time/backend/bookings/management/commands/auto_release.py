@@ -2,13 +2,8 @@ import time
 import logging
 
 from django.core.management.base import BaseCommand
-from django.utils import timezone
-from datetime import timedelta
 
-from bookings.models import Booking
-from bookings.constants import BookingStatus
-from bookings.emails import send_no_show_notification
-from organisation.models import OrganisationSettings
+from bookings.utils import release_stale_bookings
 
 logger = logging.getLogger(__name__)
 
@@ -33,42 +28,15 @@ class Command(BaseCommand):
             )
             try:
                 while True:
-                    count = self._release_stale_bookings()
+                    count = release_stale_bookings()
                     if count:
                         self.stdout.write(self.style.SUCCESS(f"Auto-released {count} booking(s) as no-show"))
                     time.sleep(60)
             except KeyboardInterrupt:
                 self.stdout.write("\nStopped auto_release loop.")
         else:
-            count = self._release_stale_bookings()
+            count = release_stale_bookings()
             if count:
                 self.stdout.write(self.style.SUCCESS(f"Auto-released {count} booking(s) as no-show"))
             else:
                 self.stdout.write("No bookings to auto-release.")
-
-    def _release_stale_bookings(self) -> int:
-        """
-        Find and mark stale bookings as no_show.
-        Returns the count of affected bookings for testability.
-        """
-        org = OrganisationSettings.get()
-        window = org.auto_release_minutes
-        now = timezone.now()
-        cutoff = now - timedelta(minutes=window)
-
-        stale_bookings = Booking.objects.filter(
-            status=BookingStatus.CONFIRMED.value,
-            checked_in=False,
-            start_time__lte=cutoff,
-            end_time__gte=now,
-        ).select_related("organizer", "room").exclude(
-            status=BookingStatus.NO_SHOW.value,
-        )
-
-        count = stale_bookings.count()
-        if count:
-            for booking in stale_bookings:
-                send_no_show_notification(booking)
-            stale_bookings.update(status=BookingStatus.NO_SHOW.value)
-            logger.info("Auto-released %d booking(s) as no-show", count)
-        return count

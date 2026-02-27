@@ -266,3 +266,54 @@ def check_booking_conflicts(
         qs = qs.exclude(id=exclude_booking_id)
     
     return qs.exists()
+
+
+# ---------------------------------------------------------------------------
+# Auto-release: mark stale confirmed bookings as no_show
+# ---------------------------------------------------------------------------
+
+def release_stale_bookings(room=None):
+    """
+    Find confirmed bookings whose check-in window has elapsed without a
+    check-in, mark them as no_show, and send notification emails.
+
+    Args:
+        room: Optional Room instance.  When provided, only bookings for that
+              room are checked (used by the panel poll).  When ``None``, all
+              rooms are checked (used by the management command / admin trigger).
+
+    Returns:
+        int – number of bookings auto-released.
+    """
+    import logging
+    from bookings.models import Booking
+    from bookings.constants import BookingStatus
+    from organisation.models import OrganisationSettings
+    from bookings.emails import send_no_show_notification
+
+    logger = logging.getLogger(__name__)
+    org = OrganisationSettings.get()
+    window = org.auto_release_minutes
+    now = timezone.now()
+    cutoff = now - timedelta(minutes=window)
+
+    qs = Booking.objects.filter(
+        status=BookingStatus.CONFIRMED.value,
+        checked_in=False,
+        start_time__lte=cutoff,
+        end_time__gte=now,
+    ).select_related("organizer", "room")
+
+    if room is not None:
+        qs = qs.filter(room=room)
+
+    count = qs.count()
+    if count:
+        for booking in qs:
+            try:
+                send_no_show_notification(booking)
+            except Exception:
+                logger.warning("Failed to send no-show email for booking %s", booking.id)
+        qs.update(status=BookingStatus.NO_SHOW.value)
+        logger.info("Auto-released %d booking(s) as no-show", count)
+    return count

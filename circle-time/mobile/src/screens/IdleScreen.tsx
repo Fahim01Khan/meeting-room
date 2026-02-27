@@ -73,7 +73,20 @@ export const IdleScreen: React.FC = () => {
 
   const timeUntilNext = getTimeUntilNextMeeting();
   const accent = primaryColour || colors.primary;
-  const leftPanelColor = '#DBEAFE';
+
+  // Determine panel color from actual room status
+  const leftPanelColor = (() => {
+    if (roomState.status === 'occupied') return '#FEE2E2';   // pastel red
+    if (roomState.status === 'upcoming') return '#FEF3C7';   // pastel amber
+    return '#DBEAFE';                                         // pastel blue (available)
+  })();
+
+  // Hero status text matching room state
+  const heroText = (() => {
+    if (roomState.status === 'occupied') return 'occupied';
+    if (roomState.status === 'upcoming') return 'upcoming';
+    return 'available';
+  })();
 
   // ─── Next‑meeting row (shared) ──────────────────────────────────────────
   const nextMeetingRow = roomState.nextMeeting ? (
@@ -110,7 +123,7 @@ export const IdleScreen: React.FC = () => {
               <Text style={[styles.date, { color: accent }]}>{formatDate(currentTime)}</Text>
             </View>
 
-            <Text style={[styles.heroStatus, { color: accent }]}>available</Text>
+            <Text style={[styles.heroStatus, { color: accent }]}>{heroText}</Text>
 
             {roomState.status === 'available' && (
               <PrimaryButton
@@ -168,7 +181,7 @@ export const IdleScreen: React.FC = () => {
       <View style={styles.portraitCenter}>
         <Text style={[styles.clock, { color: accent }]}>{formatTime(currentTime)}</Text>
         <Text style={[styles.date, { color: accent }]}>{formatDate(currentTime)}</Text>
-        <Text style={[styles.heroStatusPortrait, { color: accent }]}>available</Text>
+        <Text style={[styles.heroStatusPortrait, { color: accent }]}>{heroText}</Text>
       </View>
 
       {/* Room meta */}

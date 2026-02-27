@@ -16,6 +16,7 @@ from datetime import timedelta
 
 from rooms.models import Room
 from bookings.models import Booking
+from bookings.utils import release_stale_bookings
 from panel.models import PairingCode, DeviceRegistration
 
 
@@ -90,6 +91,9 @@ def room_state(request, room_id):
             {"success": False, "message": "Room not found"},
             status=status.HTTP_404_NOT_FOUND,
         )
+
+    # Auto-release ghosted bookings for this room on every poll
+    release_stale_bookings(room=room)
 
     now = timezone.now()
     today_end = now.replace(hour=23, minute=59, second=59)

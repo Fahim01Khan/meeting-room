@@ -7,12 +7,14 @@ from bookings.views import (
     booking_detail,
     checkin_booking,
     end_booking,
+    trigger_auto_release,
 )
 
 urlpatterns = [
     path("rooms/<uuid:room_id>/bookings", room_bookings, name="room-bookings"),
     path("bookings", create_booking, name="bookings-create"),
     path("bookings/recurring", create_recurring_booking, name="bookings-create-recurring"),
+    path("bookings/trigger-auto-release", trigger_auto_release, name="bookings-trigger-auto-release"),
     # PUT + DELETE on the same path, dispatched by HTTP method
     path("bookings/<uuid:booking_id>", booking_detail, name="bookings-detail"),
     path("bookings/<uuid:booking_id>/checkin", checkin_booking, name="bookings-checkin"),

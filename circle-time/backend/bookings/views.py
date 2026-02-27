@@ -636,3 +636,32 @@ def end_booking(request, booking_id):
     provider.delete_event(str(booking.id))
 
     return Response({"success": True, "data": True})
+
+
+# ---------------------------------------------------------------------------
+# POST /api/bookings/trigger-auto-release  (admin-only manual trigger)
+# ---------------------------------------------------------------------------
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def trigger_auto_release(request):
+    """
+    Admin-only endpoint to manually trigger auto-release of ghosted bookings
+    across all rooms. Returns the count of bookings released.
+    """
+    if request.user.role != "admin":
+        return Response(
+            {"success": False, "message": "Admin access required"},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
+    from bookings.utils import release_stale_bookings
+    count = release_stale_bookings()
+
+    return Response({
+        "success": True,
+        "data": {
+            "releasedCount": count,
+            "message": f"Auto-released {count} booking(s) as no-show" if count else "No bookings to auto-release",
+        },
+    })
