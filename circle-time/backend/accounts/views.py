@@ -114,7 +114,9 @@ def oidc_login_view(request):
             status=status.HTTP_501_NOT_IMPLEMENTED,
         )
 
-    # TODO: Build OIDC authorization URL and redirect
+    # FUTURE: When PROVIDER_MODE != 'local', build the OIDC authorization URL
+    # using the configured identity provider (Google/Microsoft/Zoho) and redirect
+    # the user to the provider's consent screen.
     return Response(
         {"success": False, "message": "OIDC provider not configured"},
         status=status.HTTP_501_NOT_IMPLEMENTED,
@@ -139,8 +141,9 @@ def oidc_callback_view(request):
             status=status.HTTP_501_NOT_IMPLEMENTED,
         )
 
-    # TODO: Exchange code → id_token, extract user claims, upsert User,
-    #       mint JWT via RefreshToken.for_user(user), return tokens.
+    # FUTURE: Exchange the authorization code for an id_token via the provider's
+    # token endpoint, extract user claims (email, name), find-or-create the local
+    # User record, and mint a JWT pair via RefreshToken.for_user(user).
     return Response(
         {"success": False, "message": "OIDC callback not implemented"},
         status=status.HTTP_501_NOT_IMPLEMENTED,

@@ -15,7 +15,8 @@ import type {
   PairingStatusResult,
 } from "../types/meeting";
 
-// TODO: Change to production URL before final deployment
+// Reads from mobile/.env; falls back to dev LAN IP when unset.
+// For production: set API_BASE_URL in .env to the production domain.
 const API_BASE_URL: string = ENV_API_BASE_URL || "http://10.10.30.71:8000/api";
 
 export const fetchRoomState = async (
@@ -160,8 +161,7 @@ export const reportRoomIssue = async (
   roomId: string,
   issue: string,
 ): Promise<boolean> => {
-  // No backend endpoint yet — stub
-  console.log(`Reporting issue for room ${roomId}: ${issue}`);
+  // Stub — no backend endpoint yet
   return false;
 };
 
@@ -169,8 +169,7 @@ export const extendMeeting = async (
   meetingId: string,
   minutes: number,
 ): Promise<boolean> => {
-  // No backend endpoint yet — stub
-  console.log(`Extending meeting ${meetingId} by ${minutes} minutes`);
+  // Stub — no backend endpoint yet
   return false;
 };
 

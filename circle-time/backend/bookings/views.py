@@ -590,7 +590,6 @@ def checkin_booking(request, booking_id):
     org_settings = OrganisationSettings.get()
     now = timezone.now()
     window_minutes = org_settings.checkin_window_minutes
-    print(f"[checkin] window={window_minutes} minutes, booking_start={booking.start_time}")
 
     # Check-in is valid from start_time - window to start_time + window
     from datetime import timedelta

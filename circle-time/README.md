@@ -1,56 +1,46 @@
-# Circle Time — Local-First Setup Guide
+# Circle Time — Meeting Room Booking System
 
-> Complete local development setup for the meeting-room management system.
-> Web app (employee booking + admin analytics) • Android panel app (room display) • Django backend.
-
----
+Circle Time is an internal meeting-room management platform built for office environments. It provides a **web dashboard** for employees and admins to book rooms, view analytics, and manage resources, alongside a **tablet app** designed for SUNMI M2 MAX devices that displays real-time room status on the door. A **Django REST API** backs both clients with JWT authentication, role-based access, calendar provider integration stubs, and automatic no-show release.
 
 ## Architecture
 
 ```
-┌─────────────┐   /api/*    ┌───────────────────┐   ProviderGateway
-│   Web App   │────────────▶│   Django Backend   │───────────────────▶ local DB
-│  (Vite)     │  proxy      │   (DRF + JWT)      │   (google/zoho stubs)
-│  :5173      │             │   :8000             │
-└─────────────┘             └──────┬──────────────┘
-                                   │
-┌─────────────┐   /api/*           │
-│ Mobile Panel│────────────────────┘
-│ (React Nav) │  HTTP / WS
-│  SUNMI M2   │
+┌─────────────┐   HTTP/REST    ┌───────────────────┐
+│  Web App    │───────────────▶│                   │
+│  (Vite)     │   proxy :5173  │   Django REST API │──▶ PostgreSQL
+│  React 18   │                │   :8000            │
+└─────────────┘                └────────┬──────────┘
+                                        │
+┌─────────────┐   HTTP/REST             │
+│ Tablet App  │─────────────────────────┘
+│ React Native│   poll every 10s
+│ SUNMI M2 MAX│
 └─────────────┘
 ```
 
-### Five Django Apps
+| Component      | Stack                                   | Purpose                                                |
+| -------------- | --------------------------------------- | ------------------------------------------------------ |
+| **Backend**    | Django 6.0.2 + DRF + SimpleJWT          | REST API, auth, booking logic, analytics, auto-release |
+| **Web App**    | Vite + React 18 + TypeScript + Tailwind | Employee booking, admin dashboard, analytics           |
+| **Tablet App** | React Native 0.76                       | Room-door display — status, check-in, ad-hoc booking   |
 
-| App         | Responsibility                                                   |
-| ----------- | ---------------------------------------------------------------- |
-| `accounts`  | Auth (email+password JWT), users, roles, OIDC scaffold           |
-| `rooms`     | Room CRUD, buildings, floor plans, availability                  |
-| `bookings`  | Reservation lifecycle, conflict validation, check-in/end-early   |
-| `panel`     | Mobile composite API (`/rooms/{id}/state`), meeting check-in/end |
-| `analytics` | KPI, utilization, ghosting, capacity, heatmap, trends, export    |
+## Quick Start (Development)
 
-### Provider Gateway (TRD Brokered Architecture)
+### Prerequisites
 
-`PROVIDER_MODE` in `.env` controls which adapter is used:
-
-- **`local`** (default) — all data in PostgreSQL, no external calls
-- **`google`** — stub adapter for Google Calendar API (future)
-- **`zoho`** — stub adapter for Zoho Calendar API (future)
-
----
-
-## Prerequisites
-
-- Python 3.11+
+- Python 3.12
+- Node.js 18+
 - PostgreSQL 14+
-- Node.js 18+ / npm
-- (Optional) Android emulator or SUNMI M2 MAX device
+- React Native CLI + Android SDK (for tablet app)
 
----
+### 1. Clone the repository
 
-## 1) PostgreSQL — Create DB & Role
+```bash
+git clone <repo-url> circle-time
+cd circle-time
+```
+
+### 2. PostgreSQL — Create database and role
 
 ```bash
 psql -U postgres -c "CREATE ROLE circletime LOGIN PASSWORD 'ct_dev_pass';"
@@ -58,325 +48,117 @@ psql -U postgres -c "CREATE DATABASE circletime_dev OWNER circletime;"
 psql -U postgres -d circletime_dev -c "CREATE EXTENSION IF NOT EXISTS uuid-ossp;"
 ```
 
----
-
-## 2) Backend — venv, deps, migrate, run
+### 3. Backend Setup
 
 ```bash
-cd circle-time/backend
+cd backend
 
-# Create and activate virtual environment
+# Create virtual environment
 python -m venv .venv
-# Windows:
+
+# Activate (Windows)
 .venv\Scripts\activate
-# macOS/Linux:
+# Activate (macOS/Linux)
 # source .venv/bin/activate
 
 # Install dependencies
 pip install -r requirements.txt
 
-# Copy environment file
-cp .env.example .env
-# (edit .env if your Postgres credentials differ)
+# Create .env from example
+copy .env.example .env          # Windows
+# cp .env.example .env          # macOS/Linux
+
+# Edit .env if your Postgres credentials differ from defaults
 
 # Run migrations
-python manage.py migrate
+.venv\Scripts\python.exe manage.py migrate
 
-# Create admin superuser
-python manage.py createsuperuser --email admin@example.com
-# When prompted, use password: pass1234
-# Rooms and users are created through the web UI after first login
+# Create the first admin user
+.venv\Scripts\python.exe manage.py createsuperuser --email admin@example.com
 
-# Start the server
-python manage.py runserver 0.0.0.0:8000
+# Start the dev server (binds to all interfaces so tablets can reach it)
+.venv\Scripts\python.exe manage.py runserver 0.0.0.0:8000
 ```
 
-### Environment Variables
-
-| Variable                  | Default                                                           | Description                                 |
-| ------------------------- | ----------------------------------------------------------------- | ------------------------------------------- |
-| `DJANGO_DEBUG`            | `True`                                                            | Debug mode                                  |
-| `SECRET_KEY`              | `dev-ONLY-change-me`                                              | Django secret key                           |
-| `ALLOWED_HOSTS`           | `localhost,127.0.0.1,0.0.0.0`                                     | Allowed hosts                               |
-| `CORS_ALLOWED_ORIGINS`    | `http://localhost:5173`                                           | CORS origins                                |
-| `DATABASE_URL`            | `postgres://circletime:ct_dev_pass@localhost:5432/circletime_dev` | PostgreSQL connection                       |
-| `PROVIDER_MODE`           | `local`                                                           | Provider adapter: `local`, `google`, `zoho` |
-| `CHECKIN_WINDOW_MINUTES`  | `15`                                                              | Check-in window duration                    |
-| `PSEUDONYMIZE_AFTER_DAYS` | `30`                                                              | Days before pseudonymizing booking data     |
-| `TIME_ZONE`               | `Africa/Johannesburg`                                             | Server timezone                             |
-
----
-
-## 3) Web App — Vite proxy to `/api`
-
-The `web/vite.config.ts` proxies `/api/*` → `http://localhost:8000` so the web client's relative `/api` base URL works unchanged.
+### 4. Web App Setup
 
 ```bash
-cd circle-time/web
+cd web
 npm install
 npm run dev
-# Open http://localhost:5173
+# Opens at http://localhost:5173
 ```
 
-### Demo Credentials
+> **Note:** `vite.config.ts` proxies `/api/*` requests to `http://localhost:8000`, so the web app communicates with the backend seamlessly in development.
 
-| Email             | Password | Role  |
-| ----------------- | -------- | ----- |
-| admin@example.com | pass1234 | Admin |
-| jane@example.com  | pass1234 | User  |
-
----
-
-## 4) Mobile Panel — Point to laptop API
-
-The mobile app uses `API_BASE_URL` in `mobile/src/services/api.ts`.
-
-### Emulator
+### 5. Tablet App Setup
 
 ```bash
+cd mobile
+npm install
+
+# For emulator:
 adb reverse tcp:8000 tcp:8000
-cd circle-time/mobile
 npx react-native run-android
+
+# For physical SUNMI M2 MAX on the same LAN:
+# 1. Find your PC's IP: ipconfig | Select-String "IPv4"
+# 2. Create mobile/.env with: API_BASE_URL=http://<YOUR_PC_IP>:8000/api
+# 3. Build a release APK:
+cd android
+./gradlew assembleRelease
+# APK is at: android/app/build/outputs/apk/release/app-release.apk
+# 4. Sideload via USB:
+adb install android/app/build/outputs/apk/release/app-release.apk
 ```
 
-The default `API_BASE_URL` is `http://10.0.2.2:8000/api` (Android emulator → host).
+## Environment Variables
 
-### Physical Device on Wi-Fi
+All backend variables are configured in `backend/.env`. See `backend/.env.example` for defaults.
 
-1. Ensure phone/tablet is on the same LAN as your laptop.
-2. Edit `mobile/src/services/api.ts`: set `API_BASE_URL = "http://<LAPTOP_LAN_IP>:8000/api"`.
-3. Run the app.
+| Variable                  | Description                                         | Example                                                           |
+| ------------------------- | --------------------------------------------------- | ----------------------------------------------------------------- |
+| `DJANGO_DEBUG`            | Enable Django debug mode                            | `True`                                                            |
+| `SECRET_KEY`              | Django secret key (change in production!)           | `dev-ONLY-change-me`                                              |
+| `ALLOWED_HOSTS`           | Comma-separated allowed hostnames                   | `localhost,127.0.0.1`                                             |
+| `CORS_ALLOWED_ORIGINS`    | Allowed CORS origins                                | `http://localhost:5173`                                           |
+| `DATABASE_URL`            | PostgreSQL connection string                        | `postgres://circletime:ct_dev_pass@localhost:5432/circletime_dev` |
+| `PROVIDER_MODE`           | Calendar provider: `local`, `google`, `zoho`        | `local`                                                           |
+| `CHECKIN_WINDOW_MINUTES`  | Minutes before/after start that check-in is allowed | `15`                                                              |
+| `PSEUDONYMIZE_AFTER_DAYS` | Days before booking PII is purged                   | `30`                                                              |
+| `TIME_ZONE`               | Server timezone                                     | `Africa/Johannesburg`                                             |
+| `SENDGRID_API_KEY`        | SendGrid API key for transactional email            | `SG.your-key-here`                                                |
+| `DEFAULT_FROM_EMAIL`      | Sender address for system emails                    | `noreply@yourdomain.com`                                          |
+| `EMAIL_BACKEND`           | Django email backend class                          | `django.core.mail.backends.console.EmailBackend`                  |
+| `FRONTEND_URL`            | Web app base URL (used in email links)              | `http://localhost:5173`                                           |
+| `GOOGLE_CLIENT_ID`        | Google OAuth2 client ID                             | `your-id.apps.googleusercontent.com`                              |
+| `GOOGLE_CLIENT_SECRET`    | Google OAuth2 client secret                         | `your-google-client-secret`                                       |
+| `MICROSOFT_CLIENT_ID`     | Microsoft/Azure AD client ID                        | `your-azure-app-client-id-uuid`                                   |
+| `MICROSOFT_CLIENT_SECRET` | Microsoft/Azure AD client secret                    | `your-azure-client-secret`                                        |
+| `MICROSOFT_TENANT_ID`     | Azure AD tenant ID                                  | `your-azure-tenant-id`                                            |
+| `ZOHO_CLIENT_ID`          | Zoho OAuth2 client ID                               | `your-zoho-client-id`                                             |
+| `ZOHO_CLIENT_SECRET`      | Zoho OAuth2 client secret                           | `your-zoho-client-secret`                                         |
 
----
+The tablet app reads `API_BASE_URL` from `mobile/.env`. See `mobile/.env.example`.
 
-## 5) Privacy — Pseudonymize Old Bookings
+## Default Accounts
 
-Per TRD §6, meeting titles and attendee names are purged after 30 days:
+- **Admin**: Created via `createsuperuser` during setup
+- **Kiosk**: `kiosk@circletime.io` — auto-created system account used by tablets for ad-hoc bookings (no login required)
 
-```bash
-# Preview what would be changed
-python manage.py pseudonymize_old_bookings --dry-run
+## Key URLs
 
-# Actually pseudonymize
-python manage.py pseudonymize_old_bookings
+| URL                              | Description               |
+| -------------------------------- | ------------------------- |
+| http://localhost:5173            | Web app (Vite dev server) |
+| http://localhost:8000/api        | REST API                  |
+| http://localhost:8000/admin      | Django admin panel        |
+| http://localhost:8000/api/health | Health check endpoint     |
 
-# Custom threshold
-python manage.py pseudonymize_old_bookings --days 60
-```
+## Documentation
 
----
-
-## API Endpoints
-
-All responses use the envelope: `{ "success": boolean, "data": <payload|null>, "message"?: string }`
-
-### Auth
-
-| Method | Path                      | Auth | Description                              |
-| ------ | ------------------------- | ---- | ---------------------------------------- |
-| POST   | `/api/auth/login`         | No   | Email+password → JWT tokens + user       |
-| GET    | `/api/auth/me`            | Yes  | Current user profile                     |
-| GET    | `/api/auth/oidc/login`    | No   | OIDC redirect (stub — 501 in local mode) |
-| GET    | `/api/auth/oidc/callback` | No   | OIDC callback (stub — 501 in local mode) |
-
-### Health
-
-| Method | Path          | Auth | Description  |
-| ------ | ------------- | ---- | ------------ |
-| GET    | `/api/health` | No   | Health check |
-
-### Rooms
-
-| Method | Path                                 | Auth | Description                                                              |
-| ------ | ------------------------------------ | ---- | ------------------------------------------------------------------------ |
-| GET    | `/api/rooms`                         | Yes  | List/filter rooms (searchQuery, building, floor, minCapacity, amenities) |
-| GET    | `/api/rooms/{id}`                    | Yes  | Room details                                                             |
-| GET    | `/api/rooms/{id}/availability?date=` | Yes  | Time-slot availability                                                   |
-| GET    | `/api/buildings`                     | Yes  | List buildings                                                           |
-| GET    | `/api/buildings/{id}/floors/{num}`   | Yes  | Floor plan with SVG + room positions                                     |
-
-### Bookings
-
-| Method | Path                             | Auth | Description                      |
-| ------ | -------------------------------- | ---- | -------------------------------- |
-| GET    | `/api/rooms/{id}/bookings?date=` | Yes  | Bookings by room + date          |
-| POST   | `/api/bookings`                  | Yes  | Create booking (409 on conflict) |
-| PUT    | `/api/bookings/{id}`             | Yes  | Update booking                   |
-| DELETE | `/api/bookings/{id}`             | Yes  | Cancel booking                   |
-| POST   | `/api/bookings/{id}/checkin`     | Yes  | Check in to booking              |
-| POST   | `/api/bookings/{id}/end`         | Yes  | End booking early                |
-
-### Panel (Mobile — no auth)
-
-| Method | Path                         | Auth | Description                                               |
-| ------ | ---------------------------- | ---- | --------------------------------------------------------- |
-| GET    | `/api/rooms/{id}/state`      | No   | Composite room state (mobile enums + organizer as string) |
-| POST   | `/api/meetings/{id}/checkin` | No   | Mobile check-in                                           |
-| POST   | `/api/meetings/{id}/end`     | No   | Mobile end early                                          |
-
-### Analytics (Admin)
-
-| Method | Path                                                   | Auth | Description                  |
-| ------ | ------------------------------------------------------ | ---- | ---------------------------- |
-| GET    | `/api/analytics/kpi?startDate=&endDate=`               | Yes  | KPI summary                  |
-| GET    | `/api/analytics/utilization?startDate=&endDate=`       | Yes  | Per-room utilization         |
-| GET    | `/api/analytics/ghosting?startDate=&endDate=`          | Yes  | Per-room ghosting            |
-| GET    | `/api/analytics/capacity?startDate=&endDate=`          | Yes  | Per-room capacity efficiency |
-| GET    | `/api/analytics/heatmap?startDate=&endDate=`           | Yes  | Day × hour heatmap           |
-| GET    | `/api/analytics/rooms/compare?startDate=&endDate=`     | Yes  | Room comparison              |
-| GET    | `/api/analytics/trends?startDate=&endDate=&metric=`    | Yes  | Trend data                   |
-| GET    | `/api/analytics/export?startDate=&endDate=&format=csv` | Yes  | CSV export                   |
-
----
-
-## Acceptance Tests
-
-### 1. Health Check
-
-```bash
-curl -s http://localhost:8000/api/health
-# → { "success": true, "data": { "status": "ok" } }
-```
-
-### 2. Login
-
-```bash
-curl -s -X POST http://localhost:8000/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{ "email": "admin@example.com", "password": "pass1234" }'
-# → { "success": true, "data": { "access": "...", "refresh": "...", "user": {...} } }
-```
-
-### 3. Me
-
-```bash
-curl -s http://localhost:8000/api/auth/me \
-  -H "Authorization: Bearer <access_token>"
-# → { "success": true, "data": { "id": "...", "name": "John Doe", "email": "admin@example.com", ... } }
-```
-
-### 4. Rooms (filtered)
-
-```bash
-curl -s "http://localhost:8000/api/rooms?building=HQ&floor=1&minCapacity=6&amenities=whiteboard&searchQuery=conference" \
-  -H "Authorization: Bearer <access_token>"
-```
-
-### 5. Room Details
-
-```bash
-curl -s http://localhost:8000/api/rooms/00000000-0000-0000-0000-000000000001 \
-  -H "Authorization: Bearer <access_token>"
-```
-
-### 6. Bookings by Room + Date
-
-```bash
-curl -s "http://localhost:8000/api/rooms/00000000-0000-0000-0000-000000000001/bookings?date=2026-02-10" \
-  -H "Authorization: Bearer <access_token>"
-```
-
-### 7. Create Booking (conflict → 409)
-
-```bash
-curl -s -X POST http://localhost:8000/api/bookings \
-  -H "Authorization: Bearer <access_token>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "roomId": "00000000-0000-0000-0000-000000000001",
-    "title": "Ad-hoc Sync",
-    "startTime": "2026-02-11T11:00:00Z",
-    "endTime": "2026-02-11T11:30:00Z",
-    "attendeeIds": []
-  }'
-```
-
-### 8. Panel Room State (mobile — no auth)
-
-```bash
-curl -s http://localhost:8000/api/rooms/00000000-0000-0000-0000-000000000001/state
-```
-
-### 9. Analytics KPI
-
-```bash
-curl -s "http://localhost:8000/api/analytics/kpi?startDate=2026-01-27&endDate=2026-02-10" \
-  -H "Authorization: Bearer <access_token>"
-```
-
----
-
-## Notes & Gotchas
-
-- **CORS**: `http://localhost:5173` is included by default. In debug mode `CORS_ALLOW_ALL_ORIGINS=True`.
-- **IDs**: All IDs are UUID strings. The mobile panel uses `room-001` which maps to `00000000-0000-0000-0000-000000000001`.
-- **No trailing slashes**: `APPEND_SLASH=False`. All API paths have no trailing slash.
-- **Time window**: Check-in window is 15 min (server-enforced). Mobile countdown uses device clock.
-- **WebSocket**: WS route (`ws://localhost:8000/api/rooms/{id}/stream`) is ready for production per TRD; polling remains the method in local mode.
-- **Provider mode**: Set `PROVIDER_MODE=local` (default). Future Google/Zoho integration only requires implementing the adapter methods.
-- **JSON only**: `DEFAULT_RENDERER_CLASSES` is set to JSONRenderer only. No browsable API.
-
----
-
-## Project Tree
-
-```
-circle-time/backend/
-├── .env.example
-├── manage.py
-├── requirements.txt
-├── config/
-│   ├── __init__.py
-│   ├── asgi.py
-│   ├── exceptions.py
-│   ├── settings.py
-│   ├── urls.py
-│   └── wsgi.py
-├── providers/
-│   ├── __init__.py
-│   ├── gateway.py
-│   ├── google_adapter.py
-│   └── zoho_adapter.py
-├── accounts/
-│   ├── __init__.py
-│   ├── admin.py
-│   ├── models.py
-│   ├── serializers.py
-│   ├── urls.py
-│   ├── views.py
-│   └── migrations/
-├── rooms/
-│   ├── __init__.py
-│   ├── admin.py
-│   ├── models.py
-│   ├── serializers.py
-│   ├── urls.py
-│   ├── views.py
-│   └── migrations/
-├── bookings/
-│   ├── __init__.py
-│   ├── admin.py
-│   ├── models.py
-│   ├── serializers.py
-│   ├── urls.py
-│   ├── views.py
-│   ├── management/
-│   │   └── commands/
-│   │       ├── pseudonymize_old_bookings.py
-│   │       └── seed.py
-│   └── migrations/
-├── panel/
-│   ├── __init__.py
-│   ├── admin.py
-│   ├── models.py
-│   ├── urls.py
-│   ├── views.py
-│   └── migrations/
-└── analytics/
-    ├── __init__.py
-    ├── admin.py
-    ├── models.py
-    ├── urls.py
-    ├── views.py
-    └── migrations/
-```
+- [Architecture](docs/ARCHITECTURE.md) — System design, components, key decisions
+- [Deployment](docs/DEPLOYMENT.md) — Production deployment guide
+- [API Reference](docs/API.md) — Full endpoint documentation
+- [Backend Planning Brief](docs/backend-planning-brief.md) — Original technical requirements
+- [Frontend Contract](docs/frontend-contract.md) — API contract for frontend clients

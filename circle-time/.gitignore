@@ -3,6 +3,7 @@
 # =========================
 .DS_Store
 Thumbs.db
+desktop.ini
 .vscode/
 .idea/
 .vs/
@@ -59,6 +60,7 @@ __pycache__/
 *.py[cod]
 *.pyo
 *.pyd
+.pytest_cache/
 
 # Virtual environments
 .venv/
@@ -69,6 +71,10 @@ env/
 *.sqlite3
 media/
 staticfiles/
+
+# Keys and secrets
+*.keystore
+*.jks
 
 # Backend-specific paths
 backend/venv/
