@@ -73,6 +73,7 @@ export const IdleScreen: React.FC = () => {
 
   const timeUntilNext = getTimeUntilNextMeeting();
   const accent = primaryColour || colors.primary;
+  const leftPanelColor = '#DBEAFE';
 
   // ─── Next‑meeting row (shared) ──────────────────────────────────────────
   const nextMeetingRow = roomState.nextMeeting ? (
@@ -103,7 +104,7 @@ export const IdleScreen: React.FC = () => {
         <View style={styles.landscapeBody}>
 
           {/* Left column — clock, giant status word, book button */}
-          <View style={styles.leftCol}>
+          <View style={[styles.leftCol, { backgroundColor: leftPanelColor }]}>
             <View>
               <Text style={[styles.clock, { color: accent }]}>{formatTime(currentTime)}</Text>
               <Text style={[styles.date, { color: accent }]}>{formatDate(currentTime)}</Text>
@@ -123,7 +124,7 @@ export const IdleScreen: React.FC = () => {
           </View>
 
           {/* Right column — logo / room info / upcoming */}
-          <View style={styles.rightCol}>
+          <View style={[styles.rightCol, { backgroundColor: '#FFFFFF' }]}>
             <View style={styles.rightTop}>
               {logoUrl ? (
                 <Image source={{ uri: logoUrl }} style={styles.logo} resizeMode="contain" />
@@ -152,7 +153,7 @@ export const IdleScreen: React.FC = () => {
 
   // ─── Portrait fallback ───────────────────────────────────────────────────────
   return (
-    <View style={[styles.container, styles.portraitWrap]}>
+    <View style={[styles.container, styles.portraitWrap, { backgroundColor: leftPanelColor }]}>
       {/* Branding */}
       <View style={styles.portraitHeader}>
         {logoUrl ? (
@@ -214,7 +215,6 @@ const styles = StyleSheet.create({
   /* ── Core ─────────────────────────────────────────────────────────────── */
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
   },
   loadingText: {
     fontSize: typography.fontSize.xl,
@@ -229,7 +229,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'space-between',
     padding: spacing.xl,
-    backgroundColor: '#DBEAFE',
   },
   clock: {
     fontSize: typography.fontSize.xl,
@@ -254,7 +253,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-end',
     padding: spacing.xl,
-    backgroundColor: '#FFFFFF',
   },
   rightTop: { alignItems: 'flex-end' },
   logo: { height: 56, width: 180, marginBottom: spacing.md },

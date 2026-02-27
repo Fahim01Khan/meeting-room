@@ -65,6 +65,7 @@ export const CheckInScreen: React.FC = () => {
   const meeting = roomState.currentMeeting;
   const isUrgent = countdown < 5 * 60; // Less than 5 minutes
   const accentColor = isUrgent ? colors.warning : colors.primary;
+  const leftPanelColor = '#FEF3C7';
 
   // ─── Landscape (Fishbowl-style) ────────────────────────────────────────────
   if (isLandscape) {
@@ -73,7 +74,7 @@ export const CheckInScreen: React.FC = () => {
         <View style={styles.landscapeBody}>
 
           {/* Left — hero prompt + countdown */}
-          <View style={styles.leftCol}>
+          <View style={[styles.leftCol, { backgroundColor: leftPanelColor }]}>
             <View>
               <Text style={[styles.heroStatus, { color: accentColor }]}>check in</Text>
               <Text style={styles.promptSubtitle}>
@@ -118,7 +119,7 @@ export const CheckInScreen: React.FC = () => {
           </View>
 
           {/* Right — meeting details + release */}
-          <View style={styles.rightCol}>
+          <View style={[styles.rightCol, { backgroundColor: '#FFFFFF' }]}>
             <View style={styles.rightTop}>
               <Text style={styles.roomName}>{roomState.room.name}</Text>
             </View>
@@ -170,7 +171,7 @@ export const CheckInScreen: React.FC = () => {
 
   // ─── Portrait layout ─────────────────────────────────────────────────────────
   return (
-    <View style={[styles.container, styles.portraitWrap]}>
+    <View style={[styles.container, styles.portraitWrap, { backgroundColor: leftPanelColor }]}>
       {/* Room name */}
       <Text style={styles.roomNamePortrait}>{roomState.room.name}</Text>
 
@@ -264,7 +265,6 @@ const styles = StyleSheet.create({
   /* ── Core ─────────────────────────────────────────────────────────────── */
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
   },
   loadingText: {
     fontSize: typography.fontSize.xl,
@@ -279,7 +279,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'space-between',
     padding: spacing.xl,
-    backgroundColor: '#FEF3C7',
   },
   heroStatus: {
     fontSize: typography.fontSize.hero,
@@ -330,7 +329,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'space-between',
     padding: spacing.xl,
-    backgroundColor: '#FFFFFF',
   },
   rightTop: { alignItems: 'flex-end' },
   roomName: {

@@ -80,6 +80,7 @@ export const MeetingScreen: React.FC = () => {
   const progress = getProgress();
   const isEnding = progress > 0.9;
   const statusColor = isEnding ? colors.warning : colors.error;
+  const leftPanelColor = '#FEE2E2';
 
   // ─── Landscape (Fishbowl-style) ────────────────────────────────────────────
   if (isLandscape) {
@@ -88,7 +89,7 @@ export const MeetingScreen: React.FC = () => {
         <View style={styles.landscapeBody}>
 
           {/* Left — giant status + countdown */}
-          <View style={styles.leftCol}>
+          <View style={[styles.leftCol, { backgroundColor: leftPanelColor }]}>
             <View>
               <Text style={[styles.clock, { color: statusColor }]}>
                 {formatTime(meeting.startTime)} - {formatTime(meeting.endTime)}
@@ -118,7 +119,7 @@ export const MeetingScreen: React.FC = () => {
           </View>
 
           {/* Right — meeting details */}
-          <View style={styles.rightCol}>
+          <View style={[styles.rightCol, { backgroundColor: '#FFFFFF' }]}>
             <View style={styles.rightTop}>
               <Text style={styles.roomName}>{roomState.room.name}</Text>
             </View>
@@ -174,7 +175,7 @@ export const MeetingScreen: React.FC = () => {
 
   // ─── Portrait fallback ───────────────────────────────────────────────────────
   return (
-    <View style={[styles.container, styles.portraitWrap]}>
+    <View style={[styles.container, styles.portraitWrap, { backgroundColor: leftPanelColor }]}>
       {/* Room name */}
       <Text style={styles.roomNamePortrait}>{roomState.room.name}</Text>
 
@@ -258,7 +259,6 @@ const styles = StyleSheet.create({
   /* ── Core ─────────────────────────────────────────────────────────────── */
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
   },
   loadingText: {
     fontSize: typography.fontSize.xl,
@@ -273,7 +273,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'space-between',
     padding: spacing.xl,
-    backgroundColor: '#FEE2E2',
   },
   clock: {
     fontSize: typography.fontSize.xl,
@@ -309,7 +308,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'space-between',
     padding: spacing.xl,
-    backgroundColor: '#FFFFFF',
   },
   rightTop: { alignItems: 'flex-end' },
   roomName: {
