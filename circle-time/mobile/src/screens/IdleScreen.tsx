@@ -123,7 +123,13 @@ export const IdleScreen: React.FC = () => {
               <Text style={[styles.date, { color: accent }]}>{formatDate(currentTime)}</Text>
             </View>
 
-            <Text style={[styles.heroStatus, { color: accent }]}>{heroText}</Text>
+            <Text
+              style={[styles.heroStatus, { color: accent }]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+            >
+              {heroText}
+            </Text>
 
             {roomState.status === 'available' && (
               <PrimaryButton
