@@ -39,7 +39,7 @@ export const typography = {
     xxl: 48,
     xxxl: 64,
     display: 96,
-    hero: 120, // Giant status word (Fishbowl-style)
+    hero: 118, // Giant status word (Fishbowl-style)
   },
   fontWeight: {
     light: "300" as const,
