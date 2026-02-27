@@ -37,15 +37,11 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
   };
 
   const logoIconStyle: React.CSSProperties = {
-    width: '48px',
-    height: '48px',
-    backgroundColor: colors.primary,
-    borderRadius: borderRadius.lg,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
+    height: '64px',
+    objectFit: 'contain',
     margin: '0 auto',
     marginBottom: spacing.md,
+    display: 'block',
   };
 
   const titleStyle: React.CSSProperties = {
@@ -142,14 +138,8 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
     <div style={containerStyle}>
       <div style={cardStyle}>
         <div style={logoStyle}>
-          <div style={logoIconStyle}>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
-              <rect x="3" y="3" width="18" height="18" rx="2" />
-              <path d="M3 9h18" />
-              <path d="M9 21V9" />
-            </svg>
-          </div>
-          <h1 style={titleStyle}>Meeting Rooms</h1>
+          <img src="/circle-time-logo.png" alt="Circle Time" style={logoIconStyle} />
+          <h1 style={titleStyle}>Circle Time</h1>
           <p style={subtitleStyle}>Sign in to manage your bookings</p>
         </div>
 

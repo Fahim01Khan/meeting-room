@@ -517,7 +517,7 @@ export const SettingsPage: React.FC = () => {
               />
             </div>
           )}
-          <p style={hintStyle}>Logo appears on the tablet display and web header</p>
+          <p style={hintStyle}>Logo appears on the tablet door-panel display only</p>
         </div>
       </div>
 

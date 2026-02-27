@@ -214,8 +214,7 @@ const styles = StyleSheet.create({
   /* ── Core ─────────────────────────────────────────────────────────────── */
   container: {
     flex: 1,
-    backgroundColor: colors.background,
-    padding: spacing.xl,
+    backgroundColor: '#FFFFFF',
   },
   loadingText: {
     fontSize: typography.fontSize.xl,
@@ -229,7 +228,8 @@ const styles = StyleSheet.create({
   leftCol: {
     flex: 1,
     justifyContent: 'space-between',
-    paddingRight: spacing.xl,
+    padding: spacing.xl,
+    backgroundColor: '#DBEAFE',
   },
   clock: {
     fontSize: typography.fontSize.xl,
@@ -253,9 +253,8 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'space-between',
     alignItems: 'flex-end',
-    paddingLeft: spacing.xl,
-    borderLeftWidth: 1,
-    borderLeftColor: colors.border,
+    padding: spacing.xl,
+    backgroundColor: '#FFFFFF',
   },
   rightTop: { alignItems: 'flex-end' },
   logo: { height: 56, width: 180, marginBottom: spacing.md },
@@ -328,7 +327,7 @@ const styles = StyleSheet.create({
   },
 
   /* ── Portrait ─────────────────────────────────────────────────────────── */
-  portraitWrap: { justifyContent: 'space-between' },
+  portraitWrap: { justifyContent: 'space-between', padding: spacing.xl },
   portraitHeader: { alignItems: 'center', marginBottom: spacing.lg },
   logoPortrait: { height: 48, width: 160, marginBottom: spacing.sm },
   roomNamePortrait: {

@@ -4,7 +4,7 @@
 Circle Time is a meeting room booking and management system built
 for GROWORX, a technology company based in Johannesburg, South Africa.
 The system replicates and extends Fishbowl Meetings functionality.
-150 employees, 8 meeting rooms.
+50 employees, Meeting rooms.
 
 ## Architecture
 - Backend: Django 6.0.2, PostgreSQL, Django REST Framework, SimpleJWT

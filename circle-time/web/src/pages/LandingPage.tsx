@@ -32,14 +32,11 @@ export const LandingPage: React.FC = () => {
     gap: '10px',
   };
 
-  const navLogoBox: React.CSSProperties = {
+  const navLogoImg: React.CSSProperties = {
     width: '32px',
     height: '32px',
-    backgroundColor: PRIMARY,
     borderRadius: '8px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
+    objectFit: 'contain',
   };
 
   const navTitle: React.CSSProperties = {
@@ -214,13 +211,7 @@ export const LandingPage: React.FC = () => {
       {/* ── Nav ─────────────────────────────────────────────────────────── */}
       <nav style={navStyle}>
         <div style={navLogoWrap}>
-          <div style={navLogoBox}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
-              <rect x="3" y="3" width="18" height="18" rx="2" />
-              <path d="M3 9h18" />
-              <path d="M9 21V9" />
-            </svg>
-          </div>
+          <img src="/circle-time-logo.png" alt="Circle Time" style={navLogoImg} />
           <span style={navTitle}>Circle Time</span>
         </div>
         <button
@@ -278,7 +269,7 @@ export const LandingPage: React.FC = () => {
           </button>
         </div>
         <p style={trustLine}>
-          Trusted by GROWORX &middot; 8 meeting rooms &middot; 150 team members
+          Trusted by GROWORX &middot; Meeting rooms &middot; 50 team members
         </p>
       </section>
 

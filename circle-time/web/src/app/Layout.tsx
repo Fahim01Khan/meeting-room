@@ -97,7 +97,7 @@ export const Layout: React.FC = () => {
   const location = useLocation();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [user, setUser] = useState<{ name: string; role: string } | null>(null);
-  const { orgName, primaryColour, logoUrl } = useOrgSettings();
+  const { orgName, primaryColour } = useOrgSettings();
 
   useEffect(() => {
     apiClient.get<{ name: string; role: string; email: string }>('/auth/me')
@@ -139,12 +139,9 @@ export const Layout: React.FC = () => {
   const logoStyle: React.CSSProperties = {
     width: '40px',
     height: '40px',
-    backgroundColor: primaryColour || colors.primary,
     borderRadius: borderRadius.md,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
     flexShrink: 0,
+    objectFit: 'contain',
   };
 
   const logoTextStyle: React.CSSProperties = {
@@ -243,20 +240,8 @@ export const Layout: React.FC = () => {
     <div style={layoutStyle}>
       <aside style={sidebarStyle}>
         <div style={logoContainerStyle}>
-          <div style={logoStyle}>
-            {logoUrl ? (
-              <img
-                src={logoUrl}
-                alt={orgName}
-                style={{ height: '32px', maxWidth: '140px', objectFit: 'contain', filter: 'brightness(0) invert(1)' }}
-              />
-            ) : (
-              <span style={{ color: '#fff', fontWeight: 700, fontSize: '18px' }}>
-                {orgName}
-              </span>
-            )}
-          </div>
-          <span style={logoTextStyle}>{orgName || 'MeetingRooms'}</span>
+          <img src="/circle-time-logo.png" alt="Circle Time" style={logoStyle} />
+          <span style={logoTextStyle}>{orgName || 'Circle Time'}</span>
         </div>
 
         <nav style={{ flex: 1 }}>

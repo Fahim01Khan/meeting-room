@@ -264,8 +264,7 @@ const styles = StyleSheet.create({
   /* ── Core ─────────────────────────────────────────────────────────────── */
   container: {
     flex: 1,
-    backgroundColor: colors.background,
-    padding: spacing.xl,
+    backgroundColor: '#FFFFFF',
   },
   loadingText: {
     fontSize: typography.fontSize.xl,
@@ -279,7 +278,8 @@ const styles = StyleSheet.create({
   leftCol: {
     flex: 1,
     justifyContent: 'space-between',
-    paddingRight: spacing.xl,
+    padding: spacing.xl,
+    backgroundColor: '#FEF3C7',
   },
   heroStatus: {
     fontSize: typography.fontSize.hero,
@@ -329,9 +329,8 @@ const styles = StyleSheet.create({
   rightCol: {
     flex: 1,
     justifyContent: 'space-between',
-    paddingLeft: spacing.xl,
-    borderLeftWidth: 1,
-    borderLeftColor: colors.border,
+    padding: spacing.xl,
+    backgroundColor: '#FFFFFF',
   },
   rightTop: { alignItems: 'flex-end' },
   roomName: {
@@ -400,7 +399,7 @@ const styles = StyleSheet.create({
   },
 
   /* ── Portrait ─────────────────────────────────────────────────────────── */
-  portraitWrap: { justifyContent: 'space-between' },
+  portraitWrap: { justifyContent: 'space-between', padding: spacing.xl },
   roomNamePortrait: {
     fontSize: typography.fontSize.xl,
     fontWeight: typography.fontWeight.bold,
