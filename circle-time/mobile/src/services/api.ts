@@ -15,9 +15,9 @@ import type {
   PairingStatusResult,
 } from "../types/meeting";
 
-// Reads from mobile/.env; falls back to dev LAN IP when unset.
+// Reads from mobile/.env; falls back to emulator loopback when unset.
 // For production: set API_BASE_URL in .env to the production domain.
-const API_BASE_URL: string = ENV_API_BASE_URL || "http://10.10.30.71:8000/api";
+const API_BASE_URL: string = ENV_API_BASE_URL || "http://10.0.2.2:8000/api";
 
 export const fetchRoomState = async (
   roomId: string,
