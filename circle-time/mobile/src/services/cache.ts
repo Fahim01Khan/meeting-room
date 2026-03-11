@@ -1,54 +1,73 @@
 // Cache service for Panel App
-// Provides offline support and data persistence
-// Uses an in-memory cache; swap to AsyncStorage in production builds.
+// Provides offline support and data persistence using AsyncStorage.
 
-import type { RoomState } from '../types/meeting';
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import type { RoomState } from "../types/meeting";
 
 const CACHE_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
+const KEY_PREFIX = "ct_cache_";
 
 interface CacheEntry<T> {
-  data: T;
-  timestamp: number;
+  value: T;
+  expiresAt: number | null;
 }
-
-const memoryCache = new Map<string, string>();
 
 function cacheKey(roomId: string): string {
-  return `panel_cache_room_${roomId}`;
+  return `${KEY_PREFIX}panel_room_${roomId}`;
 }
 
-export const cacheRoomState = async (roomId: string, state: RoomState): Promise<void> => {
+export const cacheRoomState = async (
+  roomId: string,
+  state: RoomState,
+): Promise<void> => {
   try {
-    const entry: CacheEntry<RoomState> = { data: state, timestamp: Date.now() };
-    memoryCache.set(cacheKey(roomId), JSON.stringify(entry));
+    const entry: CacheEntry<RoomState> = {
+      value: state,
+      expiresAt: Date.now() + CACHE_EXPIRY_MS,
+    };
+    await AsyncStorage.setItem(cacheKey(roomId), JSON.stringify(entry));
   } catch (error) {
-    console.error('Failed to cache room state:', error);
+    console.error("Failed to cache room state:", error);
   }
 };
 
-export const getCachedRoomState = async (roomId: string): Promise<RoomState | null> => {
+export const getCachedRoomState = async (
+  roomId: string,
+): Promise<RoomState | null> => {
   try {
-    const raw = memoryCache.get(cacheKey(roomId));
+    const raw = await AsyncStorage.getItem(cacheKey(roomId));
     if (!raw) return null;
 
     const entry: CacheEntry<RoomState> = JSON.parse(raw);
-    if (Date.now() - entry.timestamp > CACHE_EXPIRY_MS) {
-      memoryCache.delete(cacheKey(roomId));
+    if (entry.expiresAt !== null && Date.now() > entry.expiresAt) {
+      await AsyncStorage.removeItem(cacheKey(roomId));
       return null;
     }
-    return entry.data;
+    return entry.value;
   } catch (error) {
-    console.error('Failed to get cached room state:', error);
+    console.error("Failed to get cached room state:", error);
     return null;
   }
 };
 
 export const clearCache = async (): Promise<void> => {
-  memoryCache.clear();
+  try {
+    const keys = await AsyncStorage.getAllKeys();
+    const cacheKeys = keys.filter((k) => k.startsWith(KEY_PREFIX));
+    if (cacheKeys.length > 0) {
+      await AsyncStorage.multiRemove(cacheKeys);
+    }
+  } catch (error) {
+    console.error("Failed to clear cache:", error);
+  }
 };
 
 export const clearRoomCache = async (roomId: string): Promise<void> => {
-  memoryCache.delete(cacheKey(roomId));
+  try {
+    await AsyncStorage.removeItem(cacheKey(roomId));
+  } catch (error) {
+    console.error("Failed to clear room cache:", error);
+  }
 };
 
 export const isCacheValid = async (roomId: string): Promise<boolean> => {

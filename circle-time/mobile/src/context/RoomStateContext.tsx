@@ -1,5 +1,3 @@
-'use client';
-
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef, type ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { RoomState, ScreenType } from '../types/meeting';
@@ -262,7 +260,7 @@ export const RoomStateProvider: React.FC<RoomStateProviderProps> = ({ children }
       cacheRoomState(roomId, state);
     });
 
-    startPolling(roomId, 30000, deviceSerial);
+    startPolling(roomId, 10000, deviceSerial); // Poll every 10s per architecture spec
 
     return () => {
       unsubscribe();

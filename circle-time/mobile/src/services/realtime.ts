@@ -25,7 +25,7 @@ export const subscribeToRoomUpdates = (
 
 export const startPolling = (
   roomId: string,
-  intervalMs: number = 30000,
+  intervalMs: number = 10000, // Poll every 10s per architecture spec
   deviceSerial?: string | null,
 ): void => {
   currentRoomId = roomId;
